@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -26,6 +27,8 @@ import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 fun AppNavigation(navController: NavHostController) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val authManager = remember { AuthManager(context) }
+
+    val profileViewModel: ProfileViewModel = viewModel()
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -97,12 +100,29 @@ fun AppNavigation(navController: NavHostController) {
                     authManager = authManager
                 )
             }
-            composable("register") { RegisterScreen(onBackToLogin = { navController.popBackStack() }, authManager = authManager) }
-            composable("forgot_password") { ForgotPasswordScreen(onBack = { navController.popBackStack() }) }
-            composable("booking") { BookingScreen(onNavigate = { navController.navigate(it) }) }
-            composable("my_bookings") { MyBookingsScreen(onNavigate = { navController.navigate(it) }) }
-            composable("profile") { ProfileScreen(onNavigate = { navController.navigate(it) }) }
-            composable("notifications") { NotificationsScreen(onBack = { navController.popBackStack() })
+            composable("register") {
+                RegisterScreen(
+                    onBackToLogin = { navController.popBackStack() },
+                    authManager = authManager)
+            }
+
+            composable("forgot_password") {
+                ForgotPasswordScreen(onBack = { navController.popBackStack() })
+            }
+            composable("booking") {
+                BookingScreen(onNavigate = { navController.navigate(it) })
+            }
+            composable("my_bookings") {
+                MyBookingsScreen(onNavigate = { navController.navigate(it) })
+            }
+            composable("profile") {
+                ProfileScreen(
+                    onNavigate = { navController.navigate(it) },
+                    viewModel = profileViewModel
+                )
+            }
+            composable("notifications") {
+                NotificationsScreen(onBack = { navController.popBackStack() })
             }
         }
     }

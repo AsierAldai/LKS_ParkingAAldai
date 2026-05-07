@@ -42,6 +42,7 @@ dependencies {
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.ui)
 
     // Apply the Compose BOM to all configurations
     val composeBom = platform(libs.androidx.compose.bom)
