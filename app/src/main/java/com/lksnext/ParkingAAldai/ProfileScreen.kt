@@ -23,6 +23,12 @@ import com.lksnext.ParkingAAldai.ui.theme.TextDark
 
 @Composable
 fun ProfileScreen(onNavigate: (String) -> Unit, viewModel: ProfileViewModel) {
+    val vehicles by viewModel.vehicles.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadUserData()
+    }
+
     // Estados para controlar los diálogos
     var showAddVehicleDialog by remember { mutableStateOf(false) }
     var showEditProfileDialog by remember { mutableStateOf(false) }
@@ -91,11 +97,11 @@ fun ProfileScreen(onNavigate: (String) -> Unit, viewModel: ProfileViewModel) {
             }
         }
 
-        if (viewModel.vehicles.isEmpty()) {
+        if (vehicles.isEmpty()) {
             EmptyVehiclesState(onAddClick = { showAddVehicleDialog = true })
         } else {
             Column(modifier = Modifier.padding(top = 16.dp)) {
-                viewModel.vehicles.forEach { vehicle ->
+                vehicles.forEach { vehicle ->
                     VehicleItem(vehicle = vehicle, onDelete = { viewModel.deleteVehicle(vehicle) })
                     Spacer(modifier = Modifier.height(12.dp))
                 }
@@ -106,7 +112,8 @@ fun ProfileScreen(onNavigate: (String) -> Unit, viewModel: ProfileViewModel) {
 
         // --- BOTÓN CERRAR SESIÓN ---
         Button(
-            onClick = { onNavigate("login") },
+            onClick = { viewModel.logout()
+                onNavigate("login") },
             modifier = Modifier.fillMaxWidth().height(56.dp),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF4444))
@@ -124,15 +131,10 @@ fun ProfileScreen(onNavigate: (String) -> Unit, viewModel: ProfileViewModel) {
     if (showAddVehicleDialog) {
         AddVehicleDialog(
             onDismiss = { showAddVehicleDialog = false },
-            onAddVehicle = { viewModel.addVehicle(it) }
-        )
-    }
-
-    // --- DIÁLOGOS ---
-    if (showAddVehicleDialog) {
-        AddVehicleDialog(
-            onDismiss = { showAddVehicleDialog = false },
-            onAddVehicle = { viewModel.addVehicle(it) }
+            onAddVehicle = { v ->
+                viewModel.addVehicle(v.plate, v.brand, v.color, v.type)
+                showAddVehicleDialog = false
+            }
         )
     }
 
@@ -144,18 +146,13 @@ fun ProfileScreen(onNavigate: (String) -> Unit, viewModel: ProfileViewModel) {
             currentPhone = viewModel.phone.value,
             onDismiss = { showEditProfileDialog = false },
             onSave = { n, u, e, p ->
-                // Aquí actualizas tu ViewModel
-                viewModel.name.value = n
-                viewModel.username.value = u
-                viewModel.email.value = e
-                viewModel.phone.value = p
+                viewModel.updateProfile(n,u,e,p)
                 showEditProfileDialog = false
             }
         )
     }
 }
 
-// --- COMPONENTES AUXILIARES PARA EL DISEÑO ---
 
 @Composable
 fun InfoCard(title: String, actionLabel: String, onAction: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
@@ -207,12 +204,12 @@ fun EmptyVehiclesState(onAddClick: () -> Unit) {
 }
 
 @Composable
-fun VehicleItem(vehicle: Vehicle, onDelete: () -> Unit) {
+fun VehicleItem(vehicle: VehicleEntity, onDelete: () -> Unit) {
     // Definimos los iconos por tipo (reutilizando SpotType de BookingScreen)
     val icon = when (vehicle.type) {
-        SpotType.ELECTRIC -> Icons.Default.ElectricBolt
-        SpotType.MOTORCYCLE -> Icons.AutoMirrored.Filled.DirectionsBike
-        SpotType.DISABLED -> Icons.AutoMirrored.Filled.Accessible
+        "ELECTRIC" -> Icons.Default.ElectricBolt
+        "MOTORCYCLE" -> Icons.AutoMirrored.Filled.DirectionsBike
+        "DISABLED" -> Icons.AutoMirrored.Filled.Accessible
         else -> Icons.Default.DirectionsCar // Combustion o genérico
     }
     Card(
@@ -263,7 +260,6 @@ fun EditProfileDialog(
         shape = RoundedCornerShape(16.dp),
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
-                // Cabecera con botones como en tu imagen
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -310,7 +306,7 @@ fun EditProfileDialog(
                 EditField(label = "Teléfono", value = phone, onValueChange = { phone = it }, placeholder = "Ej: +34 612 345 678")
             }
         },
-        confirmButton = {} // Botones personalizados arriba, dejamos esto vacío
+        confirmButton = {}
     )
 }
 

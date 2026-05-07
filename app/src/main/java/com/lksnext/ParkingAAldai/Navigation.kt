@@ -28,7 +28,6 @@ fun AppNavigation(navController: NavHostController) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val authManager = remember { AuthManager(context) }
 
-    val profileViewModel: ProfileViewModel = viewModel()
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -36,6 +35,17 @@ fun AppNavigation(navController: NavHostController) {
     // Definimos qué pantallas NO deben mostrar la barra inferior (Login, etc.)
     val showBars = currentRoute in listOf("booking", "my_bookings", "profile")
 
+    val database = remember { AppDatabase.getDatabase(context)}
+    val dao = database.appDao()
+
+// Usa esto en lugar del remember
+    val profileViewModel: ProfileViewModel = viewModel(
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                return ProfileViewModel(dao, authManager) as T
+            }
+        }
+    )
     Scaffold(
         modifier = Modifier.windowInsetsPadding(WindowInsets.systemBars),
         topBar = {
@@ -103,7 +113,9 @@ fun AppNavigation(navController: NavHostController) {
             composable("register") {
                 RegisterScreen(
                     onBackToLogin = { navController.popBackStack() },
-                    authManager = authManager)
+                    authManager = authManager,
+                    dao = dao
+                )
             }
 
             composable("forgot_password") {

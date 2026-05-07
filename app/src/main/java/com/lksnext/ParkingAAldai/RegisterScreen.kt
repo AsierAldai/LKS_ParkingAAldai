@@ -25,9 +25,10 @@ import androidx.compose.ui.unit.sp
 import com.lksnext.ParkingAAldai.ui.theme.BackgroundBeige
 import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 import com.lksnext.ParkingAAldai.ui.theme.TextDark
+import kotlinx.coroutines.launch
 
 @Composable
-fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager) {
+fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager, dao: AppDao) {
     var name by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -35,6 +36,7 @@ fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager) {
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("")}
+    val scope = rememberCoroutineScope()
     
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
@@ -148,14 +150,23 @@ fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager) {
             // Register Button
             Button(
                 onClick = {
-                    if (username.isEmpty() || password.isEmpty()){
+                    if (email.isEmpty() || password.isEmpty()){
                         errorMessage = "Completa todos los campos"
                     } else if (password != confirmPassword){
                         errorMessage = "Las contraseñas no coinciden"
                     } else{
-                        val success = authManager.registerUser(username, password)
+                        val success = authManager.registerUser(email, username, password)
                         if (success){
-                            onBackToLogin()
+                            scope.launch{
+                                val newUser = UserEntity(
+                                    email = email,
+                                    name = name,
+                                    username = username,
+                                    phone = phone
+                                )
+                                dao.insertUser(newUser)
+                                onBackToLogin()
+                            }
                         } else{
                             errorMessage = "El usuario ya existe"
                         }
@@ -243,5 +254,6 @@ fun RegisterTextField(
 @Composable
 fun RegisterScreenPreview() {
     val context = androidx.compose.ui.platform.LocalContext.current
-    RegisterScreen(onBackToLogin = {}, authManager = AuthManager(context))
+    val db = AppDatabase.getDatabase(context)
+    RegisterScreen(onBackToLogin = {}, authManager = AuthManager(context), dao = db.appDao())
 }
