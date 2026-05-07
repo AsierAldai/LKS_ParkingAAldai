@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.PersonOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -23,6 +24,9 @@ import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppNavigation(navController: NavHostController) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val authManager = remember { AuthManager(context) }
+
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -89,10 +93,11 @@ fun AppNavigation(navController: NavHostController) {
                         navController.navigate("booking") {
                             popUpTo("login") { inclusive = true }
                         }
-                    }
+                    },
+                    authManager = authManager
                 )
             }
-            composable("register") { RegisterScreen(onBackToLogin = { navController.popBackStack() }) }
+            composable("register") { RegisterScreen(onBackToLogin = { navController.popBackStack() }, authManager = authManager) }
             composable("forgot_password") { ForgotPasswordScreen(onBack = { navController.popBackStack() }) }
             composable("booking") { BookingScreen(onNavigate = { navController.navigate(it) }) }
             composable("my_bookings") { MyBookingsScreen(onNavigate = { navController.navigate(it) }) }

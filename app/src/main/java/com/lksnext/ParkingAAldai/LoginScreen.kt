@@ -30,11 +30,13 @@ import com.lksnext.ParkingAAldai.ui.theme.TextDark
 fun LoginScreen(
     onNavigateToRegister: () -> Unit,
     onNavigateToForgotPassword: () -> Unit,
-    onLoginSuccess: () -> Unit
+    onLoginSuccess: () -> Unit,
+    authManager: AuthManager
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var errorText by remember { mutableStateOf("")}
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -138,7 +140,13 @@ fun LoginScreen(
 
             // Login Button
             Button(
-                onClick = onLoginSuccess,
+                onClick = {
+                    if (authManager.loginUser(email, password)){
+                        onLoginSuccess()
+                    } else{
+                        errorText = "Correo o contraseña incorrectos"
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -151,6 +159,9 @@ fun LoginScreen(
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
+            }
+            if (errorText.isNotEmpty()){
+                Text(errorText, color = Color.Red, modifier = Modifier.padding(top = 8.dp))
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -180,5 +191,6 @@ fun LoginScreen(
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
 @Composable
 fun LoginScreenPreview() {
-    LoginScreen(onNavigateToRegister = {}, onNavigateToForgotPassword = {}, onLoginSuccess = {})
+    val context = androidx.compose.ui.platform.LocalContext.current
+    LoginScreen(onNavigateToRegister = {}, onNavigateToForgotPassword = {}, onLoginSuccess = {}, authManager = AuthManager(context))
 }

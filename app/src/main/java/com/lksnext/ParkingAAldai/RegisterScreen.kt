@@ -27,13 +27,14 @@ import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 import com.lksnext.ParkingAAldai.ui.theme.TextDark
 
 @Composable
-fun RegisterScreen(onBackToLogin: () -> Unit) {
+fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager) {
     var name by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf("")}
     
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
@@ -146,7 +147,20 @@ fun RegisterScreen(onBackToLogin: () -> Unit) {
 
             // Register Button
             Button(
-                onClick = { /* Handle registration */ },
+                onClick = {
+                    if (username.isEmpty() || password.isEmpty()){
+                        errorMessage = "Completa todos los campos"
+                    } else if (password != confirmPassword){
+                        errorMessage = "Las contraseñas no coinciden"
+                    } else{
+                        val success = authManager.registerUser(username, password)
+                        if (success){
+                            onBackToLogin()
+                        } else{
+                            errorMessage = "El usuario ya existe"
+                        }
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -159,6 +173,10 @@ fun RegisterScreen(onBackToLogin: () -> Unit) {
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
+            }
+
+            if (errorMessage.isNotEmpty()){
+                Text(errorMessage, color = Color.Red, modifier = Modifier.padding(top = 8.dp))
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -224,5 +242,6 @@ fun RegisterTextField(
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
 @Composable
 fun RegisterScreenPreview() {
-    RegisterScreen(onBackToLogin = {})
+    val context = androidx.compose.ui.platform.LocalContext.current
+    RegisterScreen(onBackToLogin = {}, authManager = AuthManager(context))
 }
