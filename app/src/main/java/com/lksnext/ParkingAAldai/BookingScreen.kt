@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 import com.lksnext.ParkingAAldai.ui.theme.TextDark
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -45,7 +46,11 @@ data class ParkingSpotData(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BookingScreen(onNavigate: (String) -> Unit) {
+fun BookingScreen(
+    onNavigate: (String) -> Unit,
+    dao: AppDao,
+    profileViewModel: ProfileViewModel
+) {
 
     var zoomLevel by remember { mutableFloatStateOf(1.0f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
@@ -53,6 +58,7 @@ fun BookingScreen(onNavigate: (String) -> Unit) {
     var showFilters by remember { mutableStateOf(false) }
     var selectedDateMillis by remember { mutableLongStateOf(Calendar.getInstance().timeInMillis) }
     var showDatePicker by remember { mutableStateOf(false) }
+
 
 
     val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
@@ -65,6 +71,16 @@ fun BookingScreen(onNavigate: (String) -> Unit) {
     var filterMoto by remember { mutableStateOf(false) }
     var filterFree by remember { mutableStateOf(false) }
     var filterOccupied by remember { mutableStateOf(false) }
+
+    val scope = rememberCoroutineScope()
+    var selectedSpotIndex by remember { mutableStateOf<Int?>(null) }
+    val userVehicles by profileViewModel.vehicles.collectAsState()
+
+    val futureReservations by if (selectedSpotIndex != null) {
+        dao.getReservationsBySpotAndDate(selectedSpotIndex!!, selectedDateMillis).collectAsState(initial = emptyList())
+    } else {
+        remember { mutableStateOf(emptyList<ReservationEntity>()) }
+    }
 
     val spots = remember {
         val types = mutableListOf<SpotType>()
@@ -235,7 +251,8 @@ fun BookingScreen(onNavigate: (String) -> Unit) {
                                 combustion = filterCombustion,
                                 electric = filterElectric,
                                 pmr = filterPmr,
-                                moto = filterMoto
+                                moto = filterMoto,
+                                onSpotClick = { index -> selectedSpotIndex = index }
                             )
                         }
                     }
@@ -329,6 +346,39 @@ fun BookingScreen(onNavigate: (String) -> Unit) {
             )
         }
     }
+    // ... antes del último } de BookingScreen ...
+
+    if (selectedSpotIndex != null) {
+        ModalBottomSheet(
+            onDismissRequest = { selectedSpotIndex = null },
+            containerColor = Color.White
+        ) {
+            ReservationSheet(
+                selectedSpotIndex = selectedSpotIndex!!,
+                spotType = spots[selectedSpotIndex!!].type,
+                selectedDateMillis = selectedDateMillis,
+                userVehicles = userVehicles,
+                futureReservations = futureReservations,
+                onDismiss = { selectedSpotIndex = null },
+                onConfirm = { vehicle, start, end ->
+                    scope.launch {
+                        val res = ReservationEntity(
+                            userEmail = vehicle.ownerEmail,
+                            spotIndex = selectedSpotIndex!!,
+                            spotType = spots[selectedSpotIndex!!].type.name,
+                            dateMillis = selectedDateMillis,
+                            startTime = start,
+                            endTime = end,
+                            vehiclePlate = vehicle.plate,
+                            reservationName = "Reserva en plaza $selectedSpotIndex"
+                        )
+                        dao.insertReservation(res)
+                        selectedSpotIndex = null // Cierra el modal al terminar
+                    }
+                }
+            )
+        }
+    }
 }
 
 @Composable
@@ -405,14 +455,14 @@ fun FilterItemSimple(label: String, checked: Boolean, onCheckedChange: (Boolean)
 }
 
 @Composable
-fun ParkingLayout(spots: List<ParkingSpotData>, combustion: Boolean, electric: Boolean, pmr: Boolean, moto: Boolean) {
+fun ParkingLayout(spots: List<ParkingSpotData>, combustion: Boolean, electric: Boolean, pmr: Boolean, moto: Boolean, onSpotClick: (Int) -> Unit) {
     val noFiltersActive = !combustion && !electric && !pmr && !moto
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         for (rowIndex in 0..4) {
             Row(horizontalArrangement = Arrangement.Center) {
-                ParkingBlock(startIndex = rowIndex * 20, spots = spots, combustion, electric, pmr, moto, noFiltersActive)
+                ParkingBlock(startIndex = rowIndex * 20, spots = spots, combustion, electric, pmr, moto, noFiltersActive, onSpotClick = onSpotClick)
                 Spacer(modifier = Modifier.width(20.dp))
-                ParkingBlock(startIndex = rowIndex * 20 + 10, spots = spots, combustion, electric, pmr, moto, noFiltersActive)
+                ParkingBlock(startIndex = rowIndex * 20 + 10, spots = spots, combustion, electric, pmr, moto, noFiltersActive, onSpotClick = onSpotClick)
             }
             if (rowIndex < 4) Spacer(modifier = Modifier.height(10.dp))
         }
@@ -420,7 +470,7 @@ fun ParkingLayout(spots: List<ParkingSpotData>, combustion: Boolean, electric: B
 }
 
 @Composable
-fun ParkingBlock(startIndex: Int, spots: List<ParkingSpotData>, combustion: Boolean, electric: Boolean, pmr: Boolean, moto: Boolean, allVisible: Boolean) {
+fun ParkingBlock(startIndex: Int, spots: List<ParkingSpotData>, combustion: Boolean, electric: Boolean, pmr: Boolean, moto: Boolean, allVisible: Boolean, onSpotClick: (Int) -> Unit) {
     Column {
         for (subRow in 0..1) {
             Row {
@@ -433,7 +483,7 @@ fun ParkingBlock(startIndex: Int, spots: List<ParkingSpotData>, combustion: Bool
                         SpotType.DISABLED -> pmr
                         SpotType.MOTORCYCLE -> moto
                     }
-                    ParkingSpot(type = spotData.type, isVisible = isVisible)
+                    ParkingSpot(type = spotData.type, isVisible = isVisible, onClick = { onSpotClick(index) })
                     if (col < 4) Spacer(modifier = Modifier.width(2.dp))
                 }
             }
@@ -443,7 +493,7 @@ fun ParkingBlock(startIndex: Int, spots: List<ParkingSpotData>, combustion: Bool
 }
 
 @Composable
-fun ParkingSpot(type: SpotType, isVisible: Boolean) {
+fun ParkingSpot(type: SpotType, isVisible: Boolean, onClick: () -> Unit) {
     val icon = when (type) {
         SpotType.COMBUSTION -> Icons.Default.DirectionsCar
         SpotType.ELECTRIC -> Icons.Default.ElectricBolt
@@ -452,7 +502,9 @@ fun ParkingSpot(type: SpotType, isVisible: Boolean) {
     }
 
     Surface(
-        modifier = Modifier.size(width = 32.dp, height = 24.dp),
+        modifier = Modifier
+            .size(width = 32.dp, height = 24.dp)
+            .clickable{onClick()},
         shape = RoundedCornerShape(2.dp),
         color = if (isVisible) Color(0xFF2ECC71) else Color.LightGray.copy(alpha = 0.2f)
     ) {
@@ -470,5 +522,38 @@ fun ParkingSpot(type: SpotType, isVisible: Boolean) {
 @Preview(showBackground = true)
 @Composable
 fun BookingScreenPreview() {
-    BookingScreen(onNavigate = {})
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // Creamos un AuthManager falso
+    val authManager = AuthManager(context)
+
+    // Creamos un DAO de mentira (Mock) para que la Preview no explote
+    val fakeDao = remember {
+        object : AppDao {
+            override suspend fun insertUser(user: UserEntity) {}
+            override suspend fun getUser(email: String): UserEntity? = null
+            override suspend fun deleteUserByEmail(email: String) {}
+            override suspend fun insertVehicle(vehicle: VehicleEntity) {}
+            override fun getVehiclesByUser(email: String) = kotlinx.coroutines.flow.flowOf(emptyList<VehicleEntity>())
+            override suspend fun deleteVehicle(vehicle: VehicleEntity) {}
+            override suspend fun updateVehiclesOwnerEmail(oldEmail: String, newEmail: String) {}
+
+            // --- LOS NUEVOS MÉTODOS DE RESERVA ---
+            override suspend fun insertReservation(reservation: ReservationEntity) {}
+            override fun getReservationsBySpotAndDate(spotIndex: Int, dateMillis: Long) =
+                kotlinx.coroutines.flow.flowOf(emptyList<ReservationEntity>())
+            override fun getReservationsByUser(email: String) =
+                kotlinx.coroutines.flow.flowOf(emptyList<ReservationEntity>())
+        }
+    }
+
+    // Creamos el ViewModel usando el DAO de mentira
+    val viewModel = remember {ProfileViewModel(fakeDao, authManager)}
+
+    // Se lo pasamos todo al BookingScreen
+    BookingScreen(
+        onNavigate = {},
+        dao = fakeDao,
+        profileViewModel = viewModel
+    )
 }

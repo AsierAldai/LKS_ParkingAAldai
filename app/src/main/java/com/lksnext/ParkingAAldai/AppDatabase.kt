@@ -24,6 +24,19 @@ data class VehicleEntity(
     val type: String
 )
 
+@Entity(tableName = "reservations")
+data class ReservationEntity(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val userEmail: String,
+    val spotIndex: Int,
+    val spotType: String,
+    val dateMillis: Long,
+    val startTime: String,
+    val endTime: String,
+    val vehiclePlate: String,
+    val reservationName: String
+)
+
 // Interfaz de acceso a datos (DAO)
 @Dao
 interface AppDao {
@@ -47,10 +60,23 @@ interface AppDao {
 
     @Query("DELETE FROM users WHERE email = :email")
     suspend fun deleteUserByEmail(email: String)
+
+    @Query("SELECT * FROM reservations WHERE userEmail = :email")
+    fun getReservationsByUser(email: String): kotlinx.coroutines.flow.Flow<List<ReservationEntity>>
+
+    @Query("SELECT * FROM reservations WHERE spotIndex = :spotIndex AND dateMillis = :dateMillis")
+    fun getReservationsBySpotAndDate(spotIndex: Int, dateMillis: Long): kotlinx.coroutines.flow.Flow<List<ReservationEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertReservation(reservation: ReservationEntity)
 }
 
 // Clase de la Base de Datos (Singleton)
-@Database(entities = [UserEntity::class, VehicleEntity::class], version = 1)
+@Database(
+    entities = [UserEntity::class, VehicleEntity::class, ReservationEntity::class],
+    version = 2,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun appDao(): AppDao
 
@@ -64,7 +90,8 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "parking_database"
-                ).build()
+                ).fallbackToDestructiveMigration()
+                .build()
                 INSTANCE = instance
                 instance
             }
