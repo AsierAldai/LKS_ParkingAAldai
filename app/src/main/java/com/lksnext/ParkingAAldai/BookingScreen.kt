@@ -49,7 +49,7 @@ fun BookingScreen(onNavigate: (String) -> Unit) {
 
     var zoomLevel by remember { mutableFloatStateOf(1.0f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
-    
+
     var showFilters by remember { mutableStateOf(false) }
     var selectedDateMillis by remember { mutableLongStateOf(Calendar.getInstance().timeInMillis) }
     var showDatePicker by remember { mutableStateOf(false) }
@@ -112,7 +112,9 @@ fun BookingScreen(onNavigate: (String) -> Unit) {
                                 color = Color.White,
                                 modifier = Modifier
                                     .size(44.dp)
-                                    .clickable { showFilters = !showFilters }
+                                    .clickable {
+                                        if (!showFilters) showFilters = true
+                                    }
                                     .border(1.dp, OrangePrimary, CircleShape),
                                 shadowElevation = 2.dp
                             ) {
@@ -281,11 +283,6 @@ fun BookingScreen(onNavigate: (String) -> Unit) {
                     IconButton(onClick = { if (zoomLevel < 3.0f) zoomLevel += 0.2f }) {
                         Icon(Icons.Default.Add, contentDescription = "Zoom In")
                     }
-                    Text(
-                        "${(zoomLevel * 100).toInt()}%",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
                     IconButton(onClick = {
                         if (zoomLevel > 0.5f) zoomLevel -= 0.2f
                         if (zoomLevel < 1.0f && zoomLevel > 0.9f) offset = Offset.Zero
@@ -309,7 +306,10 @@ fun BookingScreen(onNavigate: (String) -> Unit) {
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) { Text("Cancelar", color = Color.Gray) }
-            }
+            },
+            colors = DatePickerDefaults.colors(
+                containerColor = Color.White
+            )
         ) {
             DatePicker(
                 state = datePickerState,
@@ -348,11 +348,10 @@ fun FilterPopover(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("Filtros", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextDark)
-            Text("Si no marcas nada, se ve todo", fontSize = 11.sp, color = Color.Gray)
-            
+
             Spacer(modifier = Modifier.height(12.dp))
             Text("Tipo de plaza", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextDark)
-            
+
             FilterItem("Combustión", Icons.Default.DirectionsCar, combustion, onCombustionChange)
             FilterItem("Eléctrico", Icons.Default.ElectricBolt, electric, onElectricChange)
             FilterItem("PMR", Icons.AutoMirrored.Filled.Accessible, pmr, onPmrChange)

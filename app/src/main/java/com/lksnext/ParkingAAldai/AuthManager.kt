@@ -13,7 +13,7 @@ class AuthManager(context: Context) {
 
     fun registerUser(email: String, username: String, pass: String): Boolean {
         if (prefs.contains(email) || prefs.contains(PREFIX_USER_MAP + username)) return false // El usuario ya existe
-        prefs.edit().apply{
+        prefs.edit().run{
             putString(email, pass)
             putString(PREFIX_USER_MAP + username, email)
             apply()
@@ -39,5 +39,25 @@ class AuthManager(context: Context) {
 
     fun logout(){
         prefs.edit().remove(KEY_LOGGED_IN_USER).apply()
+    }
+
+    fun updateSession(oldEmail: String, newEmail: String, newUsername: String) {
+        val password = prefs.getString(oldEmail, "") ?: ""
+        val oldUsername = prefs.all.entries.find { it.value == oldEmail && it.key.startsWith(PREFIX_USER_MAP) }?.key
+
+        prefs.edit().run {
+            if (oldEmail != newEmail) {
+                remove(oldEmail)
+                putString(newEmail, password)
+                if (getUserEmail() == oldEmail){
+                    putString(KEY_LOGGED_IN_USER, newEmail)
+                }
+            }
+
+            oldUsername?.let { remove(it) }
+            putString(PREFIX_USER_MAP + newUsername, newEmail)
+
+            apply()
+        }
     }
 }

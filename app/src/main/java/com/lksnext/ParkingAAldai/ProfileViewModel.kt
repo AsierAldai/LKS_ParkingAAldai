@@ -17,7 +17,7 @@ class ProfileViewModel(
     // Información Personal
     var name = mutableStateOf("Usuario")
     var username = mutableStateOf("")
-    var email = mutableStateOf(getCurrentEmail())
+    var email = mutableStateOf("")
     var phone = mutableStateOf("")
 
     private val _refreshTrigger = MutableStateFlow(System.currentTimeMillis())
@@ -31,6 +31,7 @@ class ProfileViewModel(
     }
     fun loadUserData() {
         val currentEmail = getCurrentEmail()
+        email.value = currentEmail
         _refreshTrigger.value = System.currentTimeMillis()
 
         viewModelScope.launch {
@@ -70,7 +71,13 @@ class ProfileViewModel(
 
     fun updateProfile(newName: String, newUsername: String, newEmail: String, newPhone: String) {
         viewModelScope.launch {
-            val updatedUser = UserEntity(getCurrentEmail(), newName, newUsername, newPhone)
+            val oldEmail= getCurrentEmail()
+            authManager.updateSession(oldEmail, newEmail, newUsername)
+            if (oldEmail != newEmail) {
+                dao.updateVehiclesOwnerEmail(oldEmail, newEmail)
+                dao.deleteUserByEmail(oldEmail)
+            }
+            val updatedUser = UserEntity(newEmail, newName, newUsername, newPhone)
             dao.insertUser(updatedUser)
             loadUserData()
         }

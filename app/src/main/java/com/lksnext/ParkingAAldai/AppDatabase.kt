@@ -41,6 +41,12 @@ interface AppDao {
 
     @Delete
     suspend fun deleteVehicle(vehicle: VehicleEntity)
+
+    @Query("UPDATE vehicles SET ownerEmail = :newEmail WHERE ownerEmail = :oldEmail")
+    suspend fun updateVehiclesOwnerEmail(oldEmail: String, newEmail: String)
+
+    @Query("DELETE FROM users WHERE email = :email")
+    suspend fun deleteUserByEmail(email: String)
 }
 
 // Clase de la Base de Datos (Singleton)
