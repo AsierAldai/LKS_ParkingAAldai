@@ -3,12 +3,11 @@ package com.lksnext.ParkingAAldai
 import androidx.compose.foundation.*
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Accessible
 import androidx.compose.material.icons.automirrored.filled.DirectionsBike
@@ -23,6 +22,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -32,9 +32,11 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 import com.lksnext.ParkingAAldai.ui.theme.TextDark
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.random.Random
 
 enum class SpotType {
     COMBUSTION, ELECTRIC, MOTORCYCLE, DISABLED
@@ -44,6 +46,17 @@ data class ParkingSpotData(
     val type: SpotType
 )
 
+// Función para normalizar la fecha a las 00:00:00 UTC para consistencia entre usuarios
+fun Long.normalizeToStartOfDay(): Long {
+    val cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+    cal.timeInMillis = this
+    cal.set(Calendar.HOUR_OF_DAY, 0)
+    cal.set(Calendar.MINUTE, 0)
+    cal.set(Calendar.SECOND, 0)
+    cal.set(Calendar.MILLISECOND, 0)
+    return cal.timeInMillis
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookingScreen(
@@ -51,20 +64,27 @@ fun BookingScreen(
     dao: AppDao,
     profileViewModel: ProfileViewModel
 ) {
-
     var zoomLevel by remember { mutableFloatStateOf(1.0f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
 
     var showFilters by remember { mutableStateOf(false) }
-    var selectedDateMillis by remember { mutableLongStateOf(Calendar.getInstance().timeInMillis) }
+    
+    // Normalizamos la fecha actual al arrancar para que coincida con lo que otros guarden
+    var selectedDateMillis by remember { 
+        mutableLongStateOf(System.currentTimeMillis().normalizeToStartOfDay()) 
+    }
+    
     var showDatePicker by remember { mutableStateOf(false) }
-
-
 
     val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
     val selectedDateFormatted = dateFormatter.format(Date(selectedDateMillis))
 
-    // Estados de los filtros: ahora empiezan en FALSE (desactivados)
+    // Obtenemos TODAS las reservas del día seleccionado para el mapa
+    val allReservationsToday by remember(selectedDateMillis) {
+        dao.getAllReservationsByDate(selectedDateMillis)
+        }.collectAsState(initial = emptyList())
+
+    // Estados de los filtros
     var filterCombustion by remember { mutableStateOf(false) }
     var filterElectric by remember { mutableStateOf(false) }
     var filterPmr by remember { mutableStateOf(false) }
@@ -76,30 +96,31 @@ fun BookingScreen(
     var selectedSpotIndex by remember { mutableStateOf<Int?>(null) }
     val userVehicles by profileViewModel.vehicles.collectAsState()
 
+    // Obtenemos reservas futuras de la plaza (incluyendo otros días para mostrar información)
     val futureReservations by if (selectedSpotIndex != null) {
-        dao.getReservationsBySpotAndDate(selectedSpotIndex!!, selectedDateMillis).collectAsState(initial = emptyList())
+        dao.getFutureReservationsBySpot(selectedSpotIndex!!, selectedDateMillis).collectAsState(initial = emptyList())
     } else {
         remember { mutableStateOf(emptyList<ReservationEntity>()) }
     }
 
     val spots = remember {
+        val random = Random(42) // Semilla fija para que las plazas no cambien de posición al reiniciar o cambiar cuenta
         val types = mutableListOf<SpotType>()
-        // 1. Añadimos primero las 3 de PMR para que estén juntas y al principio (cerca de salida/entrada)
         repeat(3) { types.add(SpotType.DISABLED) }
-        // 2. El resto según proporciones exactas
         repeat(64) { types.add(SpotType.COMBUSTION) }
         repeat(18) { types.add(SpotType.ELECTRIC) }
         repeat(15) { types.add(SpotType.MOTORCYCLE) }
-        // Mezclamos solo a partir del índice 3 para que las PMR no se muevan de su sitio
+        
         val subList = types.subList(3, 100)
-        subList.shuffle()
+        subList.shuffle(random)
 
         types.map { ParkingSpotData(type = it) }
     }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF0F2F5)) // Tu color de fondo
+            .background(Color(0xFFF0F2F5))
     ) {
         Card(
             modifier = Modifier
@@ -112,8 +133,7 @@ fun BookingScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(12.dp)
-                        .verticalScroll(rememberScrollState()),
+                        .padding(12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // --- CABECERA (Filtros, Entrada, Fecha) ---
@@ -128,9 +148,7 @@ fun BookingScreen(
                                 color = Color.White,
                                 modifier = Modifier
                                     .size(44.dp)
-                                    .clickable {
-                                        if (!showFilters) showFilters = true
-                                    }
+                                    .clickable { showFilters = !showFilters }
                                     .border(1.dp, OrangePrimary, CircleShape),
                                 shadowElevation = 2.dp
                             ) {
@@ -167,7 +185,6 @@ fun BookingScreen(
                             }
                         }
 
-                        // Indicador ENTRADA
                         Surface(
                             color = Color(0xFF2E7D32),
                             shape = RoundedCornerShape(4.dp),
@@ -192,7 +209,6 @@ fun BookingScreen(
                             }
                         }
 
-                        // Selector FECHA
                         Surface(
                             shape = RoundedCornerShape(8.dp),
                             color = Color.White,
@@ -226,12 +242,12 @@ fun BookingScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(400.dp)
+                            .height(450.dp)
                             .clipToBounds()
                             .background(Color.White.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
                             .pointerInput(Unit) {
-                                detectTransformGestures { _, pan, zoom, _ ->
-                                    zoomLevel = (zoomLevel * zoom).coerceIn(0.5f, 3.0f)
+                                detectTransformGestures(passThrough = false) { _, pan, zoom, _ ->
+                                    zoomLevel = (zoomLevel * zoom).coerceIn(1.0f, 5.0f)
                                     offset += pan
                                 }
                             }
@@ -239,6 +255,7 @@ fun BookingScreen(
                         Box(
                             modifier = Modifier
                                 .align(Alignment.Center)
+                                .wrapContentSize(unbounded = true) 
                                 .graphicsLayer(
                                     scaleX = zoomLevel,
                                     scaleY = zoomLevel,
@@ -252,6 +269,7 @@ fun BookingScreen(
                                 electric = filterElectric,
                                 pmr = filterPmr,
                                 moto = filterMoto,
+                                reservations = allReservationsToday,
                                 onSpotClick = { index -> selectedSpotIndex = index }
                             )
                         }
@@ -259,7 +277,6 @@ fun BookingScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // SALIDA
                     Surface(
                         color = Color.Red,
                         shape = RoundedCornerShape(4.dp),
@@ -297,12 +314,15 @@ fun BookingScreen(
                         .width(48.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    IconButton(onClick = { if (zoomLevel < 3.0f) zoomLevel += 0.2f }) {
+                    IconButton(onClick = { if (zoomLevel < 5.0f) zoomLevel += 0.5f }) {
                         Icon(Icons.Default.Add, contentDescription = "Zoom In")
                     }
                     IconButton(onClick = {
-                        if (zoomLevel > 0.5f) zoomLevel -= 0.2f
-                        if (zoomLevel < 1.0f && zoomLevel > 0.9f) offset = Offset.Zero
+                        if (zoomLevel > 1.0f) zoomLevel -= 0.5f
+                        if (zoomLevel < 1.0f) {
+                            offset = Offset.Zero
+                            zoomLevel = 1.0f
+                        }
                     }) {
                         Icon(Icons.Default.Remove, contentDescription = "Zoom Out")
                     }
@@ -317,16 +337,16 @@ fun BookingScreen(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let { selectedDateMillis = it }
+                    datePickerState.selectedDateMillis?.let { 
+                        selectedDateMillis = it.normalizeToStartOfDay() 
+                    }
                     showDatePicker = false
                 }) { Text("OK", color = OrangePrimary, fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) { Text("Cancelar", color = Color.Gray) }
             },
-            colors = DatePickerDefaults.colors(
-                containerColor = Color.White
-            )
+            colors = DatePickerDefaults.colors(containerColor = Color.White)
         ) {
             DatePicker(
                 state = datePickerState,
@@ -334,19 +354,16 @@ fun BookingScreen(
                     containerColor = Color.White,
                     titleContentColor = TextDark,
                     headlineContentColor = TextDark,
-
                     selectedDayContainerColor = OrangePrimary,
                     selectedDayContentColor = Color.White,
                     todayContentColor = OrangePrimary,
                     todayDateBorderColor = OrangePrimary,
-
                     dayContentColor = TextDark,
                     weekdayContentColor = Color.Gray
                 )
             )
         }
     }
-    // ... antes del último } de BookingScreen ...
 
     if (selectedSpotIndex != null) {
         ModalBottomSheet(
@@ -373,7 +390,7 @@ fun BookingScreen(
                             reservationName = "Reserva en plaza $selectedSpotIndex"
                         )
                         dao.insertReservation(res)
-                        selectedSpotIndex = null // Cierra el modal al terminar
+                        selectedSpotIndex = null
                     }
                 }
             )
@@ -398,19 +415,15 @@ fun FilterPopover(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("Filtros", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextDark)
-
             Spacer(modifier = Modifier.height(12.dp))
             Text("Tipo de plaza", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextDark)
-
             FilterItem("Combustión", Icons.Default.DirectionsCar, combustion, onCombustionChange)
             FilterItem("Eléctrico", Icons.Default.ElectricBolt, electric, onElectricChange)
             FilterItem("PMR", Icons.AutoMirrored.Filled.Accessible, pmr, onPmrChange)
             FilterItem("Moto", Icons.AutoMirrored.Filled.DirectionsBike, moto, onMotoChange)
-
             Spacer(modifier = Modifier.height(8.dp))
             HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray)
             Spacer(modifier = Modifier.height(8.dp))
-
             Text("Disponibilidad", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextDark)
             FilterItemSimple("Plazas libres", free, onFreeChange)
             FilterItemSimple("Plazas ocupadas", occupied, onOccupiedChange)
@@ -455,45 +468,57 @@ fun FilterItemSimple(label: String, checked: Boolean, onCheckedChange: (Boolean)
 }
 
 @Composable
-fun ParkingLayout(spots: List<ParkingSpotData>, combustion: Boolean, electric: Boolean, pmr: Boolean, moto: Boolean, onSpotClick: (Int) -> Unit) {
+fun ParkingLayout(
+    spots: List<ParkingSpotData>, 
+    combustion: Boolean, 
+    electric: Boolean, 
+    pmr: Boolean, 
+    moto: Boolean, 
+    reservations: List<ReservationEntity>, 
+    onSpotClick: (Int) -> Unit
+) {
     val noFiltersActive = !combustion && !electric && !pmr && !moto
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.requiredWidth(450.dp) 
+    ) {
         for (rowIndex in 0..4) {
             Row(horizontalArrangement = Arrangement.Center) {
-                ParkingBlock(startIndex = rowIndex * 20, spots = spots, combustion, electric, pmr, moto, noFiltersActive, onSpotClick = onSpotClick)
-                Spacer(modifier = Modifier.width(20.dp))
-                ParkingBlock(startIndex = rowIndex * 20 + 10, spots = spots, combustion, electric, pmr, moto, noFiltersActive, onSpotClick = onSpotClick)
+                ParkingBlock(startIndex = rowIndex * 20, spots = spots, combustion, electric, pmr, moto, noFiltersActive, reservations, onSpotClick = onSpotClick)
+                Spacer(modifier = Modifier.width(32.dp))
+                ParkingBlock(startIndex = rowIndex * 20 + 10, spots = spots, combustion, electric, pmr, moto, noFiltersActive, reservations, onSpotClick = onSpotClick)
             }
-            if (rowIndex < 4) Spacer(modifier = Modifier.height(10.dp))
+            if (rowIndex < 4) Spacer(modifier = Modifier.height(12.dp))
         }
     }
 }
 
 @Composable
-fun ParkingBlock(startIndex: Int, spots: List<ParkingSpotData>, combustion: Boolean, electric: Boolean, pmr: Boolean, moto: Boolean, allVisible: Boolean, onSpotClick: (Int) -> Unit) {
+fun ParkingBlock(startIndex: Int, spots: List<ParkingSpotData>, combustion: Boolean, electric: Boolean, pmr: Boolean, moto: Boolean, allVisible: Boolean, reservations: List<ReservationEntity>, onSpotClick: (Int) -> Unit) {
     Column {
         for (subRow in 0..1) {
             Row {
                 for (col in 0..4) {
                     val index = startIndex + subRow * 5 + col
                     val spotData = spots[index]
+                    val isOccupied = reservations.any { it.spotIndex == index }
                     val isVisible = allVisible || when(spotData.type) {
                         SpotType.COMBUSTION -> combustion
                         SpotType.ELECTRIC -> electric
                         SpotType.DISABLED -> pmr
                         SpotType.MOTORCYCLE -> moto
                     }
-                    ParkingSpot(type = spotData.type, isVisible = isVisible, onClick = { onSpotClick(index) })
-                    if (col < 4) Spacer(modifier = Modifier.width(2.dp))
+                    ParkingSpot(type = spotData.type, isVisible = isVisible, isOccupied = isOccupied, onClick = { onSpotClick(index) })
+                    if (col < 4) Spacer(modifier = Modifier.width(4.dp))
                 }
             }
-            if (subRow == 0) Spacer(modifier = Modifier.height(2.dp))
+            if (subRow == 0) Spacer(modifier = Modifier.height(4.dp))
         }
     }
 }
 
 @Composable
-fun ParkingSpot(type: SpotType, isVisible: Boolean, onClick: () -> Unit) {
+fun ParkingSpot(type: SpotType, isVisible: Boolean, isOccupied: Boolean, onClick: () -> Unit) {
     val icon = when (type) {
         SpotType.COMBUSTION -> Icons.Default.DirectionsCar
         SpotType.ELECTRIC -> Icons.Default.ElectricBolt
@@ -503,10 +528,14 @@ fun ParkingSpot(type: SpotType, isVisible: Boolean, onClick: () -> Unit) {
 
     Surface(
         modifier = Modifier
-            .size(width = 32.dp, height = 24.dp)
+            .requiredSize(width = 36.dp, height = 28.dp)
             .clickable{onClick()},
         shape = RoundedCornerShape(2.dp),
-        color = if (isVisible) Color(0xFF2ECC71) else Color.LightGray.copy(alpha = 0.2f)
+        color = when {
+            !isVisible -> Color.LightGray.copy(alpha = 0.2f)
+            isOccupied -> Color(0xFFFFD700) 
+            else -> Color(0xFF2ECC71)
+        }
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(
@@ -519,15 +548,61 @@ fun ParkingSpot(type: SpotType, isVisible: Boolean, onClick: () -> Unit) {
     }
 }
 
+suspend fun PointerInputScope.detectTransformGestures(
+    passThrough: Boolean = false,
+    onGesture: (centroid: Offset, pan: Offset, zoom: Float, rotation: Float) -> Unit
+) {
+    awaitEachGesture {
+        var rotation = 0f
+        var zoom = 1f
+        var pan = Offset.Zero
+        var pastTouchSlop = false
+        val touchSlop = viewConfiguration.touchSlop
+
+        awaitFirstDown(requireUnconsumed = false)
+        do {
+            val event = awaitPointerEvent()
+            val canceled = event.changes.any { it.isConsumed }
+            if (!canceled) {
+                val zoomChange = event.calculateZoom()
+                val rotationChange = event.calculateRotation()
+                val panChange = event.calculatePan()
+
+                if (!pastTouchSlop) {
+                    zoom *= zoomChange
+                    rotation += rotationChange
+                    pan += panChange
+
+                    val centroidSize = event.calculateCentroidSize(useCurrent = false)
+                    val zoomMotion = kotlin.math.abs(1 - zoom) * centroidSize
+                    val rotationMotion = kotlin.math.abs(rotation) * kotlin.math.PI.toFloat() * centroidSize / 180f
+                    val panMotion = pan.getDistance()
+
+                    if (zoomMotion > touchSlop || rotationMotion > touchSlop || panMotion > touchSlop) {
+                        pastTouchSlop = true
+                    }
+                }
+
+                if (pastTouchSlop) {
+                    val centroid = event.calculateCentroid(useCurrent = false)
+                    if (zoomChange != 1f || rotationChange != 0f || panChange != Offset.Zero) {
+                        onGesture(centroid, panChange, zoomChange, rotationChange)
+                    }
+                    // Si estamos haciendo zoom (más de 1 dedo), consumimos el evento para que los botones no se pulsen
+                    if (event.changes.size > 1) {
+                        event.changes.forEach { it.consume() }
+                    }
+                }
+            }
+        } while (event.changes.any { it.pressed })
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 fun BookingScreenPreview() {
     val context = androidx.compose.ui.platform.LocalContext.current
-
-    // Creamos un AuthManager falso
     val authManager = AuthManager(context)
-
-    // Creamos un DAO de mentira (Mock) para que la Preview no explote
     val fakeDao = remember {
         object : AppDao {
             override suspend fun insertUser(user: UserEntity) {}
@@ -537,23 +612,13 @@ fun BookingScreenPreview() {
             override fun getVehiclesByUser(email: String) = kotlinx.coroutines.flow.flowOf(emptyList<VehicleEntity>())
             override suspend fun deleteVehicle(vehicle: VehicleEntity) {}
             override suspend fun updateVehiclesOwnerEmail(oldEmail: String, newEmail: String) {}
-
-            // --- LOS NUEVOS MÉTODOS DE RESERVA ---
             override suspend fun insertReservation(reservation: ReservationEntity) {}
-            override fun getReservationsBySpotAndDate(spotIndex: Int, dateMillis: Long) =
-                kotlinx.coroutines.flow.flowOf(emptyList<ReservationEntity>())
-            override fun getReservationsByUser(email: String) =
-                kotlinx.coroutines.flow.flowOf(emptyList<ReservationEntity>())
+            override fun getReservationsBySpotAndDate(spotIndex: Int, dateMillis: Long) = kotlinx.coroutines.flow.flowOf(emptyList<ReservationEntity>())
+            override fun getReservationsByUser(email: String) = kotlinx.coroutines.flow.flowOf(emptyList<ReservationEntity>())
+            override fun getAllReservationsByDate(date: Long) = kotlinx.coroutines.flow.flowOf(emptyList<ReservationEntity>())
+            override fun getFutureReservationsBySpot(spotIndex: Int, minDateMillis: Long) = kotlinx.coroutines.flow.flowOf(emptyList<ReservationEntity>())
         }
     }
-
-    // Creamos el ViewModel usando el DAO de mentira
     val viewModel = remember {ProfileViewModel(fakeDao, authManager)}
-
-    // Se lo pasamos todo al BookingScreen
-    BookingScreen(
-        onNavigate = {},
-        dao = fakeDao,
-        profileViewModel = viewModel
-    )
+    BookingScreen(onNavigate = {}, dao = fakeDao, profileViewModel = viewModel)
 }

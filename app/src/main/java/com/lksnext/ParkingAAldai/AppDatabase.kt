@@ -69,6 +69,12 @@ interface AppDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertReservation(reservation: ReservationEntity)
+
+    @Query("SELECT * FROM reservations WHERE dateMillis = :date")
+    fun getAllReservationsByDate(date: Long): Flow<List<ReservationEntity>>
+
+    @Query("SELECT * FROM reservations WHERE spotIndex = :spotIndex AND dateMillis >= :minDateMillis ORDER BY dateMillis ASC, startTime ASC")
+    fun getFutureReservationsBySpot(spotIndex: Int, minDateMillis: Long): Flow<List<ReservationEntity>>
 }
 
 // Clase de la Base de Datos (Singleton)

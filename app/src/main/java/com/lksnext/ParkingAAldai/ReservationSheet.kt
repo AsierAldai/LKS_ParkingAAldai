@@ -38,6 +38,26 @@ fun ReservationSheet(
     var endTime by remember { mutableStateOf("17:00") }
     var selectedVehicle by remember { mutableStateOf<VehicleEntity?>(null) }
 
+    var showStartPicker by remember { mutableStateOf(false) }
+    var showEndPicker by remember { mutableStateOf(false) }
+
+    val isTimeValid = remember(startTime, endTime) {
+        try {
+            val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
+            val start = sdf.parse(startTime)!!
+            val end = sdf.parse(endTime)!!
+            val limitStart = sdf.parse("08:00")!!
+            val limitEnd = sdf.parse("19:00")!!
+
+            val diffHours = (end.time - start.time) / (1000.0 * 60 * 60)
+
+            val withinRange = !start.before(limitStart) && !end.after(limitEnd)
+            val durationOk = diffHours in 0.1..9.0
+
+            withinRange && durationOk
+        } catch (e: Exception) { false }
+    }
+
     val compatibleVehicles = userVehicles.filter {
         when (spotType) {
             SpotType.MOTORCYCLE -> it.type == SpotType.MOTORCYCLE.name
@@ -71,15 +91,43 @@ fun ReservationSheet(
         Text("Fecha", fontWeight = FontWeight.Bold)
         OutlinedTextField(value = dateFormatter.format(Date(selectedDateMillis)), onValueChange = {}, readOnly = true, modifier = Modifier.fillMaxWidth())
 
-        Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(value = startTime, onValueChange = { startTime = it }, label = { Text("Desde") }, modifier = Modifier.weight(1f))
-            OutlinedTextField(value = endTime, onValueChange = { endTime = it }, label = { Text("Hasta") }, modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+
+            OutlinedCard(
+                onClick = { showStartPicker = true },
+                modifier = Modifier.weight(1f),
+                colors = CardDefaults.outlinedCardColors(containerColor = Color.White)
+            ) {
+                Column(Modifier.padding(12.dp)) {
+                    Text("Desde", fontSize = 12.sp, color = Color.Gray)
+                    Text(startTime, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            OutlinedCard(
+                onClick = { showEndPicker = true },
+                modifier = Modifier.weight(1f),
+                colors = CardDefaults.outlinedCardColors(containerColor = Color.White)
+            ) {
+                Column(Modifier.padding(12.dp)) {
+                    Text("Hasta", fontSize = 12.sp, color = Color.Gray)
+                    Text(endTime, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+            }
         }
 
+        if (!isTimeValid) {
+            Text(
+                "⚠️ Horario de 08:00 a 19:00 (Máximo 9 horas)",
+                color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp)
+            )
+        }
 
         Text("Vehículo", fontWeight = FontWeight.Bold)
         if (compatibleVehicles.isEmpty()) {
-            Text("⚠️ No tienes vehículos compatibles.", color = Color.Red, fontSize = 12.sp)
+            Text("⚠️ No tienes vehículos compatibles. Puedes registrar un vehículo en tu perfil.", color = Color.Red, fontSize = 12.sp)
         } else {
             compatibleVehicles.forEach { vehicle ->
                 Row(Modifier.fillMaxWidth().clickable { selectedVehicle = vehicle }.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -109,9 +157,60 @@ fun ReservationSheet(
 
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = { selectedVehicle?.let { onConfirm(it, startTime, endTime) } }, enabled = selectedVehicle != null, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)) {
+            Button(
+                onClick = { selectedVehicle?.let { onConfirm(it, startTime, endTime) } },
+                enabled = selectedVehicle != null && isTimeValid,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
+            ) {
                 Text("Reservar", color = Color.White)
             }
+        }
+        if (showStartPicker) {
+            val state = rememberTimePickerState(initialHour = 8, initialMinute = 0, is24Hour = true)
+            TimePickerDialog(
+                onDismissRequest = { showStartPicker = false },
+                onConfirm = {
+                    startTime = String.format("%02d:%02d", state.hour, state.minute)
+                    showStartPicker = false
+                }
+            ) { TimePicker(state = state,
+                colors = TimePickerDefaults.colors(
+                    clockDialColor = Color(0xFFF0F0F0), // Fondo del reloj
+                    clockDialSelectedContentColor = Color.White, // Número seleccionado
+                    clockDialUnselectedContentColor = Color.Black, // Números no seleccionados
+                    selectorColor = OrangePrimary, // La aguja del reloj
+                    periodSelectorSelectedContainerColor = OrangePrimary,
+                    containerColor = Color.White,
+                    timeSelectorSelectedContainerColor = OrangePrimary.copy(alpha = 0.2f), // Fondo del cuadro de la hora (digital)
+                    timeSelectorSelectedContentColor = OrangePrimary, // Color del número (digital) cuando se edita
+                    timeSelectorUnselectedContainerColor = Color(0xFFF0F0F0), // Fondo del cuadro cuando no se edita
+                    timeSelectorUnselectedContentColor = Color.Black,
+                )
+            )}
+        }
+        if (showEndPicker) {
+            val state = rememberTimePickerState(initialHour = 17, initialMinute = 0, is24Hour = true)
+            TimePickerDialog(
+                onDismissRequest = { showEndPicker = false },
+                onConfirm = {
+                    endTime = String.format("%02d:%02d", state.hour, state.minute)
+                    showEndPicker = false
+                }
+            ) { TimePicker(state = state,
+                colors = TimePickerDefaults.colors(
+                    clockDialColor = Color(0xFFF0F0F0), // Fondo del reloj
+                    clockDialSelectedContentColor = Color.White, // Número seleccionado
+                    clockDialUnselectedContentColor = Color.Black, // Números no seleccionados
+                    selectorColor = OrangePrimary, // La aguja del reloj
+                    periodSelectorSelectedContainerColor = OrangePrimary,
+                    containerColor = Color.White,
+                    timeSelectorSelectedContainerColor = OrangePrimary.copy(alpha = 0.2f), // Fondo del cuadro de la hora (digital)
+                    timeSelectorSelectedContentColor = OrangePrimary, // Color del número (digital) cuando se edita
+                    timeSelectorUnselectedContainerColor = Color(0xFFF0F0F0), // Fondo del cuadro cuando no se edita
+                    timeSelectorUnselectedContentColor = Color.Black
+                )
+            )}
         }
     }
 }
@@ -131,5 +230,34 @@ fun getSpotPrefix(type: SpotType): String {
         SpotType.MOTORCYCLE -> "M"
         SpotType.DISABLED -> "PMR"
         else -> "C"
+    }
+}
+
+@Composable
+fun TimePickerDialog(
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    // Forzamos el esquema de colores claro solo para el contenido de este diálogo
+    MaterialTheme(colorScheme = lightColorScheme()) {
+        AlertDialog(
+            onDismissRequest = onDismissRequest,
+            confirmButton = {
+                TextButton(onClick = onConfirm) {
+                    Text("OK", color = OrangePrimary)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissRequest) {
+                    Text("Cancelar", color = Color.Gray)
+                }
+            },
+            text = {
+                // El contenido (TimePicker) heredará el lightColorScheme definido arriba
+                content()
+            },
+            containerColor = Color.White // Fondo del diálogo siempre blanco
+        )
     }
 }
