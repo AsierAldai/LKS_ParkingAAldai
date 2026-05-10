@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.ui.platform.LocalLocale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,6 +69,33 @@ fun ReservationSheet(
     }
 
     val dateFormatter = remember { SimpleDateFormat("EEEE, d 'de' MMMM 'de' yyyy", Locale.getDefault()) }
+
+    val myTimePickerColors = TimePickerDefaults.colors(
+        clockDialColor = Color(0xFFF0F0F0),
+        clockDialSelectedContentColor = Color.White,
+        clockDialUnselectedContentColor = Color.Black,
+        selectorColor = OrangePrimary,
+        periodSelectorSelectedContainerColor = OrangePrimary,
+        containerColor = Color.White,
+        timeSelectorSelectedContainerColor = OrangePrimary.copy(alpha = 0.2f),
+        timeSelectorSelectedContentColor = OrangePrimary,
+        timeSelectorUnselectedContainerColor = Color(0xFFF0F0F0),
+        timeSelectorUnselectedContentColor = Color.Black
+    )
+
+    val isSpotOccupiedByTime = remember(startTime, endTime, futureReservations) {
+        val newStart = timeToMinutes(startTime)
+        val newEnd = timeToMinutes(endTime)
+
+        // Solo comprobamos las reservas que coinciden exactamente con selectedDateMillis
+        futureReservations.filter { it.dateMillis == selectedDateMillis }.any { res ->
+            val existingStart = timeToMinutes(res.startTime)
+            val existingEnd = timeToMinutes(res.endTime)
+
+            // Lógica de solapamiento: (StartA < EndB) y (EndA > StartB)
+            newStart < existingEnd && newEnd > existingStart
+        }
+    }
 
     Column(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.9f).padding(16.dp).verticalScroll(rememberScrollState())) {
 
@@ -148,8 +176,31 @@ fun ReservationSheet(
         if (futureReservations.isEmpty()) {
             Text("No hay reservas futuras para esta plaza", color = Color.Gray, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
         } else {
-            futureReservations.forEach { res ->
-                Text("• ${res.startTime} - ${res.endTime} (${res.vehiclePlate})", fontSize = 14.sp)
+            val (reservationsToday, reservationsOtherDays) = remember(futureReservations, selectedDateMillis) {
+                futureReservations.partition { it.dateMillis == selectedDateMillis }
+            }
+
+            // --- SECCIÓN HOY ---
+            if (reservationsToday.isNotEmpty()) {
+                Text("Hoy", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = OrangePrimary)
+                reservationsToday.forEach { res ->
+                    Text("• ${res.startTime} - ${res.endTime} (${res.vehiclePlate})", fontSize = 14.sp)
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+
+            // --- SECCIÓN OTROS DÍAS ---
+            if (reservationsOtherDays.isNotEmpty()) {
+                Text("Próximos días", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.Gray)
+                val shortDateFmt = SimpleDateFormat("dd/MM", LocalLocale.current.platformLocale)
+                reservationsOtherDays.forEach { res ->
+                    val dateLabel = shortDateFmt.format(Date(res.dateMillis))
+                    Text("• $dateLabel: ${res.startTime} - ${res.endTime}", fontSize = 14.sp)
+                }
+            }
+
+            if (futureReservations.isEmpty()) {
+                Text("No hay reservas futuras para esta plaza", color = Color.Gray, fontSize = 13.sp)
             }
         }
 
@@ -159,12 +210,15 @@ fun ReservationSheet(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(
                 onClick = { selectedVehicle?.let { onConfirm(it, startTime, endTime) } },
-                enabled = selectedVehicle != null && isTimeValid,
+                enabled = selectedVehicle != null && isTimeValid && !isSpotOccupiedByTime,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
             ) {
                 Text("Reservar", color = Color.White)
             }
+        }
+        if (isSpotOccupiedByTime) {
+            Text("⚠️ Esta plaza ya está ocupada en ese horario.", color = Color.Red, fontSize = 12.sp)
         }
         if (showStartPicker) {
             val state = rememberTimePickerState(initialHour = 8, initialMinute = 0, is24Hour = true)
@@ -175,19 +229,7 @@ fun ReservationSheet(
                     showStartPicker = false
                 }
             ) { TimePicker(state = state,
-                colors = TimePickerDefaults.colors(
-                    clockDialColor = Color(0xFFF0F0F0), // Fondo del reloj
-                    clockDialSelectedContentColor = Color.White, // Número seleccionado
-                    clockDialUnselectedContentColor = Color.Black, // Números no seleccionados
-                    selectorColor = OrangePrimary, // La aguja del reloj
-                    periodSelectorSelectedContainerColor = OrangePrimary,
-                    containerColor = Color.White,
-                    timeSelectorSelectedContainerColor = OrangePrimary.copy(alpha = 0.2f), // Fondo del cuadro de la hora (digital)
-                    timeSelectorSelectedContentColor = OrangePrimary, // Color del número (digital) cuando se edita
-                    timeSelectorUnselectedContainerColor = Color(0xFFF0F0F0), // Fondo del cuadro cuando no se edita
-                    timeSelectorUnselectedContentColor = Color.Black,
-                )
-            )}
+                colors = myTimePickerColors)}
         }
         if (showEndPicker) {
             val state = rememberTimePickerState(initialHour = 17, initialMinute = 0, is24Hour = true)
@@ -198,19 +240,7 @@ fun ReservationSheet(
                     showEndPicker = false
                 }
             ) { TimePicker(state = state,
-                colors = TimePickerDefaults.colors(
-                    clockDialColor = Color(0xFFF0F0F0), // Fondo del reloj
-                    clockDialSelectedContentColor = Color.White, // Número seleccionado
-                    clockDialUnselectedContentColor = Color.Black, // Números no seleccionados
-                    selectorColor = OrangePrimary, // La aguja del reloj
-                    periodSelectorSelectedContainerColor = OrangePrimary,
-                    containerColor = Color.White,
-                    timeSelectorSelectedContainerColor = OrangePrimary.copy(alpha = 0.2f), // Fondo del cuadro de la hora (digital)
-                    timeSelectorSelectedContentColor = OrangePrimary, // Color del número (digital) cuando se edita
-                    timeSelectorUnselectedContainerColor = Color(0xFFF0F0F0), // Fondo del cuadro cuando no se edita
-                    timeSelectorUnselectedContentColor = Color.Black
-                )
-            )}
+                colors = myTimePickerColors)}
         }
     }
 }
@@ -223,6 +253,11 @@ fun getIconForType(type: SpotType): ImageVector {
         SpotType.MOTORCYCLE -> Icons.AutoMirrored.Filled.DirectionsBike
         SpotType.DISABLED -> Icons.AutoMirrored.Filled.Accessible
     }
+}
+
+fun timeToMinutes(time: String): Int {
+    val parts = time.split(":")
+    return parts[0].toInt() * 60 + parts[1].toInt()
 }
 
 fun getSpotPrefix(type: SpotType): String {

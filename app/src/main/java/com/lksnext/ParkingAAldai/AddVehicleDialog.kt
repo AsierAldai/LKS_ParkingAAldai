@@ -21,7 +21,7 @@ import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 import com.lksnext.ParkingAAldai.ui.theme.TextDark
 
 @Composable
-fun AddVehicleDialog(onDismiss: () -> Unit, onAddVehicle: (Vehicle) -> Unit) {
+fun AddVehicleDialog(onDismiss: () -> Unit, onAddVehicle: (String, String, String, SpotType) -> Unit) {
     // Estados para los campos del formulario
     var plate by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf(SpotType.COMBUSTION) } // Tipo por defecto
@@ -90,7 +90,7 @@ fun AddVehicleDialog(onDismiss: () -> Unit, onAddVehicle: (Vehicle) -> Unit) {
                     onClick = {
                         // Validación básica (puedes mejorarla)
                         if (plate.isNotEmpty() && brand.isNotEmpty() && color.isNotEmpty()) {
-                            onAddVehicle(Vehicle(plate = plate, type = selectedType, brand = brand, color = color))
+                            onAddVehicle(plate, brand, color, selectedType)
                             onDismiss() // Cierra el diálogo al añadir
                         }
                     },

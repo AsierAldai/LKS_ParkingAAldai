@@ -23,12 +23,13 @@ class ProfileViewModel(
     private val _refreshTrigger = MutableStateFlow(System.currentTimeMillis())
 
     val vehicles: StateFlow<List<VehicleEntity>> = _refreshTrigger
-        .flatMapLatest { email -> dao.getVehiclesByUser(getCurrentEmail()) }
+        .flatMapLatest { _ -> dao.getVehiclesByUser(getCurrentEmail()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         loadUserData()
     }
+
     fun loadUserData() {
         val currentEmail = getCurrentEmail()
         email.value = currentEmail
@@ -71,7 +72,7 @@ class ProfileViewModel(
 
     fun updateProfile(newName: String, newUsername: String, newEmail: String, newPhone: String) {
         viewModelScope.launch {
-            val oldEmail= getCurrentEmail()
+            val oldEmail = getCurrentEmail()
             authManager.updateSession(oldEmail, newEmail, newUsername)
             if (oldEmail != newEmail) {
                 dao.updateVehiclesOwnerEmail(oldEmail, newEmail)
@@ -89,12 +90,3 @@ class ProfileViewModel(
         email.value = ""
     }
 }
-
-
-data class Vehicle(
-    val id: String = java.util.UUID.randomUUID().toString(), // ID único
-    val plate: String,
-    val type: SpotType,
-    val brand: String,
-    val color: String
-)

@@ -75,6 +75,15 @@ interface AppDao {
 
     @Query("SELECT * FROM reservations WHERE spotIndex = :spotIndex AND dateMillis >= :minDateMillis ORDER BY dateMillis ASC, startTime ASC")
     fun getFutureReservationsBySpot(spotIndex: Int, minDateMillis: Long): Flow<List<ReservationEntity>>
+
+    @Delete
+    suspend fun deleteReservation(reservation: ReservationEntity)
+
+    @Update
+    suspend fun updateReservation(reservation: ReservationEntity)
+
+    @Query("""SELECT * FROM reservations WHERE spotIndex = :spotIndex AND dateMillis = :dateMillis AND id != :excludeId""")
+    fun getOtherReservationsForSpot(spotIndex: Int, dateMillis: Long, excludeId: Int): Flow<List<ReservationEntity>>
 }
 
 // Clase de la Base de Datos (Singleton)

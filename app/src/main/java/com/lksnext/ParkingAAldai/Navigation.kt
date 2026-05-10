@@ -125,7 +125,7 @@ fun AppNavigation(navController: NavHostController) {
                 BookingScreen(onNavigate = { navController.navigate(it) }, dao, profileViewModel)
             }
             composable("my_bookings") {
-                MyBookingsScreen(onNavigate = { navController.navigate(it) })
+                MyBookingsScreen(dao, profileViewModel)
             }
             composable("profile") {
                 ProfileScreen(

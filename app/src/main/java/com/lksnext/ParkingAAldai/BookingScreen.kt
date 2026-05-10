@@ -269,6 +269,8 @@ fun BookingScreen(
                                 electric = filterElectric,
                                 pmr = filterPmr,
                                 moto = filterMoto,
+                                free = filterFree,
+                                occupied = filterOccupied,
                                 reservations = allReservationsToday,
                                 onSpotClick = { index -> selectedSpotIndex = index }
                             )
@@ -473,20 +475,22 @@ fun ParkingLayout(
     combustion: Boolean, 
     electric: Boolean, 
     pmr: Boolean, 
-    moto: Boolean, 
+    moto: Boolean,
+    free: Boolean,
+    occupied: Boolean,
     reservations: List<ReservationEntity>, 
     onSpotClick: (Int) -> Unit
 ) {
-    val noFiltersActive = !combustion && !electric && !pmr && !moto
+    val noFiltersActive = !combustion && !electric && !pmr && !moto && !free && !occupied
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.requiredWidth(450.dp) 
     ) {
         for (rowIndex in 0..4) {
             Row(horizontalArrangement = Arrangement.Center) {
-                ParkingBlock(startIndex = rowIndex * 20, spots = spots, combustion, electric, pmr, moto, noFiltersActive, reservations, onSpotClick = onSpotClick)
+                ParkingBlock(startIndex = rowIndex * 20, spots = spots, combustion, electric, pmr, moto, free, occupied, noFiltersActive, reservations, onSpotClick = onSpotClick)
                 Spacer(modifier = Modifier.width(32.dp))
-                ParkingBlock(startIndex = rowIndex * 20 + 10, spots = spots, combustion, electric, pmr, moto, noFiltersActive, reservations, onSpotClick = onSpotClick)
+                ParkingBlock(startIndex = rowIndex * 20 + 10, spots = spots, combustion, electric, pmr, moto, free, occupied, noFiltersActive, reservations, onSpotClick = onSpotClick)
             }
             if (rowIndex < 4) Spacer(modifier = Modifier.height(12.dp))
         }
@@ -494,7 +498,18 @@ fun ParkingLayout(
 }
 
 @Composable
-fun ParkingBlock(startIndex: Int, spots: List<ParkingSpotData>, combustion: Boolean, electric: Boolean, pmr: Boolean, moto: Boolean, allVisible: Boolean, reservations: List<ReservationEntity>, onSpotClick: (Int) -> Unit) {
+fun ParkingBlock(
+    startIndex: Int,
+    spots: List<ParkingSpotData>,
+    combustion: Boolean,
+    electric: Boolean,
+    pmr: Boolean,
+    moto: Boolean,
+    free: Boolean,
+    occupied: Boolean,
+    allVisible: Boolean,
+    reservations: List<ReservationEntity>,
+    onSpotClick: (Int) -> Unit) {
     Column {
         for (subRow in 0..1) {
             Row {
@@ -502,13 +517,28 @@ fun ParkingBlock(startIndex: Int, spots: List<ParkingSpotData>, combustion: Bool
                     val index = startIndex + subRow * 5 + col
                     val spotData = spots[index]
                     val isOccupied = reservations.any { it.spotIndex == index }
-                    val isVisible = allVisible || when(spotData.type) {
+                    val matchesType = when(spotData.type) {
                         SpotType.COMBUSTION -> combustion
                         SpotType.ELECTRIC -> electric
                         SpotType.DISABLED -> pmr
                         SpotType.MOTORCYCLE -> moto
                     }
-                    ParkingSpot(type = spotData.type, isVisible = isVisible, isOccupied = isOccupied, onClick = { onSpotClick(index) })
+                    val matchesAvailability = when {
+                        free && occupied -> true
+                        free -> !isOccupied
+                        occupied -> isOccupied
+                        else -> true
+                    }
+
+                    val typeFilterActive = combustion || electric || pmr || moto
+                    val availFilterActive = free || occupied
+
+                    val finalVisibility = allVisible || (
+                            (!typeFilterActive || matchesType) &&
+                                    (!availFilterActive || matchesAvailability)
+                            )
+
+                    ParkingSpot(type = spotData.type, isVisible = finalVisibility, isOccupied = isOccupied, onClick = { onSpotClick(index) })
                     if (col < 4) Spacer(modifier = Modifier.width(4.dp))
                 }
             }
@@ -518,7 +548,11 @@ fun ParkingBlock(startIndex: Int, spots: List<ParkingSpotData>, combustion: Bool
 }
 
 @Composable
-fun ParkingSpot(type: SpotType, isVisible: Boolean, isOccupied: Boolean, onClick: () -> Unit) {
+fun ParkingSpot(
+    type: SpotType,
+    isVisible: Boolean,
+    isOccupied: Boolean,
+    onClick: () -> Unit) {
     val icon = when (type) {
         SpotType.COMBUSTION -> Icons.Default.DirectionsCar
         SpotType.ELECTRIC -> Icons.Default.ElectricBolt
@@ -617,6 +651,9 @@ fun BookingScreenPreview() {
             override fun getReservationsByUser(email: String) = kotlinx.coroutines.flow.flowOf(emptyList<ReservationEntity>())
             override fun getAllReservationsByDate(date: Long) = kotlinx.coroutines.flow.flowOf(emptyList<ReservationEntity>())
             override fun getFutureReservationsBySpot(spotIndex: Int, minDateMillis: Long) = kotlinx.coroutines.flow.flowOf(emptyList<ReservationEntity>())
+            override suspend fun updateReservation(reservation: ReservationEntity) {}
+            override suspend fun deleteReservation(reservation: ReservationEntity) {}
+            override fun getOtherReservationsForSpot(spotIndex: Int, dateMillis: Long, excludeId: Int): Flow<List<ReservationEntity>> = kotlinx.coroutines.flow.flowOf(emptyList())
         }
     }
     val viewModel = remember {ProfileViewModel(fakeDao, authManager)}

@@ -131,9 +131,8 @@ fun ProfileScreen(onNavigate: (String) -> Unit, viewModel: ProfileViewModel) {
     if (showAddVehicleDialog) {
         AddVehicleDialog(
             onDismiss = { showAddVehicleDialog = false },
-            onAddVehicle = { v ->
-                viewModel.addVehicle(v.plate, v.brand, v.color, v.type)
-                showAddVehicleDialog = false
+            onAddVehicle = { plate, brand, color, type ->
+                viewModel.addVehicle(plate, brand, color, type)
             }
         )
     }
