@@ -4,10 +4,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PersonOutline
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -21,6 +22,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
+import androidx.lifecycle.ViewModelProvider
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,7 +42,8 @@ fun AppNavigation(navController: NavHostController) {
 
 // Usa esto en lugar del remember
     val profileViewModel: ProfileViewModel = viewModel(
-        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+        factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
             override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
                 return ProfileViewModel(dao, authManager) as T
             }
@@ -64,12 +67,36 @@ fun AppNavigation(navController: NavHostController) {
                         )
                     },
                     actions = {
-                        IconButton(onClick = { navController.navigate("notifications") }) {
-                            Icon(
-                                imageVector = Icons.Default.Notifications,
-                                contentDescription = "Notificaciones",
-                                tint = OrangePrimary // O el color que prefieras
-                            )
+                        val unreadCount by dao.getUnreadCount(profileViewModel.email.value).collectAsState(initial = 0)
+
+                        IconButton(
+                            onClick = { navController.navigate("notifications") },
+                            modifier = Modifier
+                                .padding(end = 12.dp)
+                        ) {
+                            BadgedBox(
+                                badge = {
+                                    if (unreadCount > 0) {
+                                        Badge(
+                                            containerColor = OrangePrimary,
+                                            contentColor = Color.White,
+                                            modifier = Modifier.offset(x = (-2).dp, y = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = if (unreadCount > 9) "9+" else unreadCount.toString(),
+                                                fontSize = 11.sp
+                                            )
+                                        }
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.Outlined.Notifications,
+                                    contentDescription = "Notificaciones",
+                                    tint = OrangePrimary,
+                                    modifier = Modifier.size(26.dp)
+                                )
+                            }
                         }
                     },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -134,7 +161,10 @@ fun AppNavigation(navController: NavHostController) {
                 )
             }
             composable("notifications") {
-                NotificationsScreen(onBack = { navController.popBackStack() })
+                NotificationsScreen(
+                    dao,
+                    profileViewModel,
+                    onBack = { navController.popBackStack() })
             }
         }
     }

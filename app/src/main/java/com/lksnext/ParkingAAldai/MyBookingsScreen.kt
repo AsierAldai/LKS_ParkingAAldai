@@ -35,7 +35,8 @@ fun MyBookingsScreen(
     profileViewModel: ProfileViewModel
 ) {
     val userEmail = profileViewModel.email.value
-    val reservations by dao.getReservationsByUser(userEmail).collectAsState(initial = emptyList())
+    val monthAgoMillis = remember {System.currentTimeMillis() - (30L * 24 * 60 * 60 * 1000L) }
+    val reservations by dao.getReservationsByUser(userEmail, monthAgoMillis).collectAsState(initial = emptyList())
     val scope = rememberCoroutineScope()
 
     var selectedReservation by remember { mutableStateOf<ReservationEntity?>(null) }

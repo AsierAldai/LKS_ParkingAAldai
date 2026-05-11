@@ -1,64 +1,154 @@
 package com.lksnext.ParkingAAldai
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.lksnext.ParkingAAldai.ui.theme.TextDark
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificationsScreen(onBack: () -> Unit) {
+fun NotificationsScreen(dao: AppDao, profileViewModel: ProfileViewModel, onBack: () -> Unit) {
+    val userEmail = profileViewModel.email.value
+    val notifications by dao.getNotificationsByUser(userEmail).collectAsState(initial = emptyList())
+    val scope = rememberCoroutineScope()
+
+    // Marcar como leídas al salir
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
+        scope.launch {
+            dao.markAllAsRead(userEmail)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Notificaciones", fontWeight = FontWeight.Bold) },
+                title = { Text("Notificaciones", fontWeight = FontWeight.Bold, color = Color(0xFF003366)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
         }
     ) { padding ->
-        LazyColumn(modifier = Modifier.padding(padding).fillMaxSize()) {
-            item { SectionHeader("No leídas") }
-            // Aquí irán las nuevas (fondo ligeramente distinto)
-            item { NotificationItem("Espacio para futura notificación", isRead = false) }
+        if (notifications.isEmpty()) {
+            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Text("No tienes notificaciones", color = Color.Gray)
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(padding).background(Color.White)
+            ) {
+                val now = System.currentTimeMillis()
+                val oneWeekMillis = 7 * 24 * 60 * 60 * 1000L
+                val oneMonthMillis = 30 * 24 * 60 * 60 * 1000L
 
-            item { SectionHeader("Leídas - Semana pasada") }
-            item { NotificationItem("Espacio para notificación antigua", isRead = true) }
+                // Agrupamos las notificaciones por tiempo
+                val unread = notifications.filter { !it.isRead }
+
+                val readThisWeek = notifications.filter {
+                    it.isRead && (now - it.timestamp) <= oneWeekMillis
+                }
+
+                val readThisMonth = notifications.filter {
+                    it.isRead && (now - it.timestamp) > oneWeekMillis && (now - it.timestamp) <= oneMonthMillis
+                }
+
+                if (unread.isNotEmpty()) {
+                    item { SectionHeader("NO LEÍDAS") }
+                    items(unread) { NotificationItem(it, isNew = true) }
+                }
+
+                if (readThisWeek.isNotEmpty()){
+                    item { SectionHeader("ESTA SEMANA") }
+                    items(readThisWeek) { NotificationItem(it, isNew = false) }
+                }
+
+                if (readThisMonth.isNotEmpty()){
+                    item { SectionHeader("ESTE MES") }
+                    items(readThisMonth) { NotificationItem(it, isNew = false) }
+                }
+            }
         }
     }
 }
 
 @Composable
-fun SectionHeader(title: String) {
-    Text(
-        text = title,
-        modifier = Modifier.padding(16.dp),
-        fontSize = 14.sp,
-        fontWeight = FontWeight.Bold,
-        color = Color.Gray
-    )
+fun NotificationItem(notification: NotificationEntity, isNew: Boolean) {
+    val sdf = remember { SimpleDateFormat("dd/MM/yyyy, HH:mm", Locale.getDefault()) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(if (isNew) Color(0xFFFFF4E5) else Color.Transparent) // Fondo naranja claro si es nueva
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(
+                    if (isNew) Modifier.border(0.5.dp, OrangePrimary.copy(alpha = 0.3f), RoundedCornerShape(8.dp)).padding(12.dp)
+                    else Modifier
+                )
+        ) {
+            Column {
+                Text(
+                    text = notification.title,
+                    fontSize = 15.sp,
+                    color = Color(0xFF003366),
+                    fontWeight = if (isNew) FontWeight.Medium else FontWeight.Normal
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = sdf.format(Date(notification.timestamp)),
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
+            }
+        }
+        if (!isNew) HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.5f))
+    }
 }
 
 @Composable
-fun NotificationItem(text: String, isRead: Boolean) {
+fun SectionHeader(title: String) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(if (isRead) Color.Transparent else Color(0xFFFFF3E0)) // Tono diferente si no está leída
-            .padding(16.dp)
+            .background(Color(0xFFF8F9FA)) // Gris muy clarito para separar secciones
+            .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
-        Text(text, color = TextDark)
+        Text(
+            text = title,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Gray,
+            letterSpacing = 1.sp // Un poco de espacio entre letras para estilo "subtítulo"
+        )
     }
 }

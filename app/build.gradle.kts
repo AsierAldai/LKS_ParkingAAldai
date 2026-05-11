@@ -9,7 +9,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.app"
+        applicationId = "com.lksnext.ParkingAAldai"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
@@ -67,5 +67,7 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+
+    implementation(libs.androidx.work.runtime.ktx)
 
 }

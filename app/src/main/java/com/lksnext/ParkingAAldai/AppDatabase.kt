@@ -37,6 +37,15 @@ data class ReservationEntity(
     val reservationName: String
 )
 
+@Entity(tableName = "notifications")
+data class NotificationEntity(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val userEmail: String,
+    val title: String,
+    val timestamp: Long = System.currentTimeMillis(),
+    val isRead: Boolean = false
+)
+
 // Interfaz de acceso a datos (DAO)
 @Dao
 interface AppDao {
@@ -61,8 +70,8 @@ interface AppDao {
     @Query("DELETE FROM users WHERE email = :email")
     suspend fun deleteUserByEmail(email: String)
 
-    @Query("SELECT * FROM reservations WHERE userEmail = :email")
-    fun getReservationsByUser(email: String): kotlinx.coroutines.flow.Flow<List<ReservationEntity>>
+    @Query("SELECT * FROM reservations WHERE userEmail = :email AND dateMillis >= :minDateMillis ORDER BY dateMillis DESC")
+    fun getReservationsByUser(email: String, minDateMillis: Long): kotlinx.coroutines.flow.Flow<List<ReservationEntity>>
 
     @Query("SELECT * FROM reservations WHERE spotIndex = :spotIndex AND dateMillis = :dateMillis")
     fun getReservationsBySpotAndDate(spotIndex: Int, dateMillis: Long): kotlinx.coroutines.flow.Flow<List<ReservationEntity>>
@@ -84,12 +93,24 @@ interface AppDao {
 
     @Query("""SELECT * FROM reservations WHERE spotIndex = :spotIndex AND dateMillis = :dateMillis AND id != :excludeId""")
     fun getOtherReservationsForSpot(spotIndex: Int, dateMillis: Long, excludeId: Int): Flow<List<ReservationEntity>>
+
+    @Insert
+    suspend fun insertNotification(notification: NotificationEntity)
+
+    @Query("SELECT * FROM notifications WHERE userEmail = :email ORDER BY timestamp DESC")
+    fun getNotificationsByUser(email: String): Flow<List<NotificationEntity>>
+
+    @Query("UPDATE notifications SET isRead = 1 WHERE userEmail = :email AND isRead = 0")
+    suspend fun markAllAsRead(email: String)
+
+    @Query("SELECT COUNT(*) FROM notifications WHERE userEmail = :email AND isRead = 0")
+    fun getUnreadCount(email: String): Flow<Int>
 }
 
 // Clase de la Base de Datos (Singleton)
 @Database(
-    entities = [UserEntity::class, VehicleEntity::class, ReservationEntity::class],
-    version = 2,
+    entities = [UserEntity::class, VehicleEntity::class, ReservationEntity::class, NotificationEntity::class],
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

@@ -64,6 +64,8 @@ fun BookingScreen(
     dao: AppDao,
     profileViewModel: ProfileViewModel
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+
     var zoomLevel by remember { mutableFloatStateOf(1.0f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
 
@@ -73,7 +75,9 @@ fun BookingScreen(
     var selectedDateMillis by remember { 
         mutableLongStateOf(System.currentTimeMillis().normalizeToStartOfDay()) 
     }
-    
+
+    val todayMillis = remember { System.currentTimeMillis().normalizeToStartOfDay() }
+    val maxDateMillis = remember { todayMillis + (7 * 24 * 60 * 60 * 1000L) }
     var showDatePicker by remember { mutableStateOf(false) }
 
     val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
@@ -334,7 +338,20 @@ fun BookingScreen(
     }
 
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedDateMillis)
+        val dateValidator = remember {
+            object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                    return utcTimeMillis in todayMillis..maxDateMillis
+                }
+                override fun isSelectableYear(year: Int): Boolean {
+                    return year >= Calendar.getInstance().get(Calendar.YEAR)
+                }
+            }
+        }
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = selectedDateMillis,
+            selectableDates = dateValidator
+        )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
@@ -381,6 +398,8 @@ fun BookingScreen(
                 onDismiss = { selectedSpotIndex = null },
                 onConfirm = { vehicle, start, end ->
                     scope.launch {
+                        val selectedSpot = spots[selectedSpotIndex!!]
+                        val prefix = getSpotPrefix(selectedSpot.type)
                         val res = ReservationEntity(
                             userEmail = vehicle.ownerEmail,
                             spotIndex = selectedSpotIndex!!,
@@ -392,6 +411,46 @@ fun BookingScreen(
                             reservationName = "Reserva en plaza $selectedSpotIndex"
                         )
                         dao.insertReservation(res)
+                        dao.insertNotification(
+                            NotificationEntity(
+                                userEmail = vehicle.ownerEmail,
+                                title = "Tu reserva en la plaza $prefix-$selectedSpotIndex ha sido confirmada",
+                                timestamp = System.currentTimeMillis(),
+                                isRead = false
+                            )
+                        )
+
+                        val workManager = androidx.work.WorkManager.getInstance(context)
+
+                        val endParts = end.split(":")
+                        val calEnd = Calendar.getInstance().apply {
+                            timeInMillis = selectedDateMillis
+                            set(Calendar.HOUR_OF_DAY, endParts[0].toInt())
+                            set(Calendar.MINUTE, endParts[1].toInt())
+                            set(Calendar.SECOND, 0)
+                        }
+
+                        val millisUntilEnd = calEnd.timeInMillis - System.currentTimeMillis()
+
+                        fun scheduleAlert(minsBefore: Int) {
+                            val delay = millisUntilEnd - (minsBefore * 60 * 1000L)
+                            if (delay > 0) {
+                                val data = androidx.work.workDataOf(
+                                    "email" to vehicle.ownerEmail,
+                                    "title" to "Tu reserva en la plaza $prefix-$selectedSpotIndex termina en $minsBefore minutos"
+                                )
+
+                                val request = androidx.work.OneTimeWorkRequestBuilder<NotificationWorker>()
+                                    .setInitialDelay(delay, java.util.concurrent.TimeUnit.MILLISECONDS)
+                                    .setInputData(data)
+                                    .build()
+
+                                workManager.enqueue(request)
+                            }
+                        }
+
+                        scheduleAlert(30)
+                        scheduleAlert(15)
                         selectedSpotIndex = null
                     }
                 }
@@ -636,26 +695,15 @@ suspend fun PointerInputScope.detectTransformGestures(
 @Composable
 fun BookingScreenPreview() {
     val context = androidx.compose.ui.platform.LocalContext.current
+    val database = AppDatabase.getDatabase(context)
+    val dao = database.appDao()
+
     val authManager = AuthManager(context)
-    val fakeDao = remember {
-        object : AppDao {
-            override suspend fun insertUser(user: UserEntity) {}
-            override suspend fun getUser(email: String): UserEntity? = null
-            override suspend fun deleteUserByEmail(email: String) {}
-            override suspend fun insertVehicle(vehicle: VehicleEntity) {}
-            override fun getVehiclesByUser(email: String) = kotlinx.coroutines.flow.flowOf(emptyList<VehicleEntity>())
-            override suspend fun deleteVehicle(vehicle: VehicleEntity) {}
-            override suspend fun updateVehiclesOwnerEmail(oldEmail: String, newEmail: String) {}
-            override suspend fun insertReservation(reservation: ReservationEntity) {}
-            override fun getReservationsBySpotAndDate(spotIndex: Int, dateMillis: Long) = kotlinx.coroutines.flow.flowOf(emptyList<ReservationEntity>())
-            override fun getReservationsByUser(email: String) = kotlinx.coroutines.flow.flowOf(emptyList<ReservationEntity>())
-            override fun getAllReservationsByDate(date: Long) = kotlinx.coroutines.flow.flowOf(emptyList<ReservationEntity>())
-            override fun getFutureReservationsBySpot(spotIndex: Int, minDateMillis: Long) = kotlinx.coroutines.flow.flowOf(emptyList<ReservationEntity>())
-            override suspend fun updateReservation(reservation: ReservationEntity) {}
-            override suspend fun deleteReservation(reservation: ReservationEntity) {}
-            override fun getOtherReservationsForSpot(spotIndex: Int, dateMillis: Long, excludeId: Int): Flow<List<ReservationEntity>> = kotlinx.coroutines.flow.flowOf(emptyList())
-        }
-    }
-    val viewModel = remember {ProfileViewModel(fakeDao, authManager)}
-    BookingScreen(onNavigate = {}, dao = fakeDao, profileViewModel = viewModel)
+    val profileViewModel = ProfileViewModel(dao, authManager)
+
+    BookingScreen(
+        onNavigate = {},
+        dao = dao,
+        profileViewModel = profileViewModel
+    )
 }
