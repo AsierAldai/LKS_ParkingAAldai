@@ -1,6 +1,7 @@
 package com.lksnext.ParkingAAldai
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -15,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -38,6 +40,8 @@ fun LoginScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     var errorText by remember { mutableStateOf("")}
 
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = BackgroundBeige
@@ -46,6 +50,11 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .safeDrawingPadding()
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = {
+                        focusManager.clearFocus()
+                    })
+                }
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -82,7 +91,7 @@ fun LoginScreen(
             // Email Field
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "Usuario o Email",
+                    text = "Correo electrónico",
                     fontWeight = FontWeight.SemiBold,
                     color = TextDark,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -90,7 +99,7 @@ fun LoginScreen(
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
-                    placeholder = { Text("Ingresa tu usuario o email") },
+                    placeholder = { Text("ejemplo@lks.com") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -141,7 +150,10 @@ fun LoginScreen(
             // Login Button
             Button(
                 onClick = {
-                    if (authManager.loginUser(email, password)){
+                    val emailTrimmed = email.trim()
+                    if (!emailTrimmed.endsWith("@lks.com")){
+                        errorText = "Usa tu correo corporativo @lks.com"
+                    } else if (authManager.loginUser(emailTrimmed, password)){
                         onLoginSuccess()
                     } else{
                         errorText = "Correo o contraseña incorrectos"

@@ -4,10 +4,14 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -19,10 +23,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 import com.lksnext.ParkingAAldai.ui.theme.TextDark
 import kotlinx.coroutines.launch
@@ -297,6 +303,8 @@ fun EditReservationDialog(
     var showStartPicker by remember { mutableStateOf(false) }
     var showEndPicker by remember { mutableStateOf(false) }
 
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+
     // Lógica de validación de horas
     val validationError = remember(startTime, endTime, otherReservations) {
         try {
@@ -333,59 +341,95 @@ fun EditReservationDialog(
 
     val canSave = validationError == null && name.isNotBlank()
 
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            modifier = Modifier.fillMaxWidth()
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { focusManager.clearFocus() }
+                .imePadding(),
+            contentAlignment = Alignment.Center
         ) {
-            Column(Modifier.padding(20.dp)) {
-                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-                    Text("Detalles de Reserva", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, null) }
-                }
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource()},
+                        indication = null
+                    ) { focusManager.clearFocus()}
+            ) {
+                Column(
+                    Modifier
+                        .padding(20.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                        Text("Detalles de Reserva", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, null) }
+                    }
 
-                Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(16.dp))
 
-                Text("Nombre de la reserva", fontSize = 13.sp, color = Color.Gray)
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp)
-                )
-
-                Spacer(Modifier.height(16.dp))
-
-                // Selectores de hora similares a ReservationSheet
-                TimeSelectorField("Hora de inicio", startTime) { showStartPicker = true }
-                Spacer(Modifier.height(16.dp))
-                TimeSelectorField("Hora de finalización", endTime) { showEndPicker = true }
-
-                Text(
-                    text = validationError ?: "Horario disponible y correcto",
-                    fontSize = 12.sp,
-                    color = if (validationError == null) Color.Gray else Color.Red,
-                    modifier = Modifier.padding(top = 4.dp),
-                    fontWeight = if (validationError != null) FontWeight.Bold else FontWeight.Normal
-                )
-
-                Spacer(Modifier.height(24.dp))
-
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f),
+                    Text("Nombre de la reserva", fontSize = 13.sp, color = Color.Gray)
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(8.dp)
-                    ) { Text("Cancelar") }
+                    )
 
-                    Button(
-                        onClick = { onSave(name, startTime, endTime) },
-                        enabled = canSave,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
-                    ) { Text("Guardar", color = Color.White) }
+                    Spacer(Modifier.height(16.dp))
+
+                    // Selectores de hora similares a ReservationSheet
+                    TimeSelectorField("Hora de inicio", startTime) {
+                        focusManager.clearFocus()
+                        showStartPicker = true
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    TimeSelectorField("Hora de finalización", endTime) {
+                        focusManager.clearFocus()
+                        showEndPicker = true
+                    }
+
+                    Text(
+                        text = validationError ?: "Horario disponible y correcto",
+                        fontSize = 12.sp,
+                        color = if (validationError == null) Color.Gray else Color.Red,
+                        modifier = Modifier.padding(top = 4.dp),
+                        fontWeight = if (validationError != null) FontWeight.Bold else FontWeight.Normal
+                    )
+
+                    Spacer(Modifier.height(24.dp))
+
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) { Text("Cancelar") }
+
+                        Button(
+                            onClick = { onSave(name, startTime, endTime) },
+                            enabled = canSave,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
+                        ) { Text("Guardar", color = Color.White) }
+                    }
                 }
             }
         }

@@ -1,6 +1,7 @@
 package com.lksnext.ParkingAAldai
 
 import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,9 +15,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 import com.lksnext.ParkingAAldai.ui.theme.TextDark
@@ -249,64 +252,110 @@ fun EditProfileDialog(
     var email by remember { mutableStateOf(currentEmail) }
     var phone by remember { mutableStateOf(currentPhone) }
 
-    AlertDialog(
+    val focusManager = LocalFocusManager.current
+
+    Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        containerColor = Color.White,
-        shape = RoundedCornerShape(16.dp),
-        text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+    ){
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ){
+                    focusManager.clearFocus()
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth(0.95f)
+                    .fillMaxHeight(0.85f)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ){
+                        focusManager.clearFocus()
+                    },
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(24.dp)
+                        .verticalScroll(rememberScrollState())
+                        .imePadding()
                 ) {
-                    Text(
-                        text = "Información\nPersonal",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextDark,
-                        lineHeight = 24.sp
-                    )
-                    Row {
-                        Button(
-                            onClick = { onSave(name, username, email, phone) },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853)), // Verde
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp)
-                        ) {
-                            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("Guardar")
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        Button(
-                            onClick = onDismiss,
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF607D8B)), // Gris azulado
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp)
-                        ) {
-                            Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("Cancelar")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Editar Perfil",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextDark,
+                        )
+                        Row {
+                            Button(
+                                onClick = {
+                                    focusManager.clearFocus()
+                                    onSave(name, username, email, phone)
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(
+                                        0xFF00C853
+                                    )
+                                ),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp)
+                            ) {
+                                Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Guardar")
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Button(
+                                onClick = onDismiss,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(
+                                        0xFF607D8B
+                                    )
+                                ),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp)
+                            ) {
+                                Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Cancelar")
+                            }
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    EditField(label = "Nombre", value = name, onValueChange = { name = it })
+                    EditField(
+                        label = "Nombre de usuario",
+                        value = username,
+                        onValueChange = { username = it })
+                    EditField(
+                        label = "Correo electrónico",
+                        value = email,
+                        onValueChange = { email = it })
+                    EditField(
+                        label = "Teléfono",
+                        value = phone,
+                        onValueChange = { phone = it },
+                        placeholder = "Ej: +34 612 345 678"
+                    )
                 }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Campos de edición
-                EditField(label = "Nombre", value = name, onValueChange = { name = it })
-                EditField(label = "Nombre de usuario", value = username, onValueChange = { username = it })
-                EditField(label = "Correo electrónico", value = email, onValueChange = { email = it })
-                EditField(label = "Teléfono", value = phone, onValueChange = { phone = it }, placeholder = "Ej: +34 612 345 678")
             }
-        },
-        confirmButton = {}
-    )
+        }
+    }
 }
 
 @Composable

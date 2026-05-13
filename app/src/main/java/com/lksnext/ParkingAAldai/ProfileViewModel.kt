@@ -73,7 +73,7 @@ class ProfileViewModel(
     fun updateProfile(newName: String, newUsername: String, newEmail: String, newPhone: String) {
         viewModelScope.launch {
             val oldEmail = getCurrentEmail()
-            authManager.updateSession(oldEmail, newEmail, newUsername)
+            authManager.updateSession(oldEmail, newEmail)
             if (oldEmail != newEmail) {
                 dao.updateVehiclesOwnerEmail(oldEmail, newEmail)
                 dao.deleteUserByEmail(oldEmail)

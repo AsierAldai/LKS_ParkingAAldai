@@ -8,28 +8,18 @@ class AuthManager(context: Context) {
 
     companion object {
         private const val KEY_LOGGED_IN_USER = "current_user_email"
-        private const val PREFIX_USER_MAP = "user_map_"
     }
 
-    fun registerUser(email: String, username: String, pass: String): Boolean {
-        if (prefs.contains(email) || prefs.contains(PREFIX_USER_MAP + username)) return false // El usuario ya existe
-        prefs.edit().run{
-            putString(email, pass)
-            putString(PREFIX_USER_MAP + username, email)
-            apply()
-        }
+    fun registerUser(email: String, pass: String): Boolean {
+        if (prefs.contains(email)) return false
+        prefs.edit().putString(email, pass).apply()
         return true
     }
 
-    fun loginUser(identifier: String, pass: String): Boolean {
-        val emailMapping = prefs.getString(PREFIX_USER_MAP + identifier, null)
-
-        val targetEmail = emailMapping ?: identifier
-
-        val savedPass = prefs.getString(targetEmail, null)
-
+    fun loginUser(email: String, pass: String): Boolean {
+        val savedPass = prefs.getString(email, null)
         if (savedPass != null && savedPass == pass) {
-            prefs.edit().putString(KEY_LOGGED_IN_USER, targetEmail).apply()
+            prefs.edit().putString(KEY_LOGGED_IN_USER, email).apply()
             return true
         }
         return false
@@ -41,9 +31,8 @@ class AuthManager(context: Context) {
         prefs.edit().remove(KEY_LOGGED_IN_USER).apply()
     }
 
-    fun updateSession(oldEmail: String, newEmail: String, newUsername: String) {
+    fun updateSession(oldEmail: String, newEmail: String) {
         val password = prefs.getString(oldEmail, "") ?: ""
-        val oldUsername = prefs.all.entries.find { it.value == oldEmail && it.key.startsWith(PREFIX_USER_MAP) }?.key
 
         prefs.edit().run {
             if (oldEmail != newEmail) {
@@ -53,10 +42,6 @@ class AuthManager(context: Context) {
                     putString(KEY_LOGGED_IN_USER, newEmail)
                 }
             }
-
-            oldUsername?.let { remove(it) }
-            putString(PREFIX_USER_MAP + newUsername, newEmail)
-
             apply()
         }
     }

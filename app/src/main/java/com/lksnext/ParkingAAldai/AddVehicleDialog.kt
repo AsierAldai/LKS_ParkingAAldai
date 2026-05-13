@@ -1,6 +1,7 @@
 package com.lksnext.ParkingAAldai
 
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -13,10 +14,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 import com.lksnext.ParkingAAldai.ui.theme.TextDark
 
@@ -28,76 +32,163 @@ fun AddVehicleDialog(onDismiss: () -> Unit, onAddVehicle: (String, String, Strin
     var brand by remember { mutableStateOf("") }
     var color by remember { mutableStateOf("") }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            elevation = CardDefaults.cardElevation(8.dp)
+    val focusManager = LocalFocusManager.current
+    val scrollState = rememberScrollState()
 
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false // Crucial para que imePadding funcione en diálogos
+        )
+    ) {
+        Box (
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = { focusManager.clearFocus() })
+                }
+                .imePadding(), // Empuja el contenido hacia arriba cuando sale el teclado
+            contentAlignment = Alignment.Center
         ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Cabecera
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    Arrangement.SpaceBetween, Alignment.CenterVertically
-                ) {
-                    Text("Añadir Vehículo", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = TextDark)
-                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, contentDescription = "Cerrar") }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Campo Matrícula
-                FormTextField(label = "Matrícula", value = plate, onValueChange = { plate = it }, placeholder = "Ej: 1234ABC")
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Selector Tipo de Vehículo (La cuadrícula)
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text("Tipo de vehículo", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextDark)
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Fila 1
-                    Row {
-                        TypeSelectorItem(label = "Combustión", icon = Icons.Default.DirectionsCar, isSelected = selectedType == SpotType.COMBUSTION, onClick = { selectedType = SpotType.COMBUSTION }, modifier = Modifier.weight(1f))
-                        Spacer(modifier = Modifier.width(12.dp))
-                        TypeSelectorItem(label = "Eléctrico", icon = Icons.Default.ElectricBolt, isSelected = selectedType == SpotType.ELECTRIC, onClick = { selectedType = SpotType.ELECTRIC }, modifier = Modifier.weight(1f))
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    // Fila 2
-                    Row {
-                        TypeSelectorItem(label = "Moto", icon = Icons.AutoMirrored.Filled.DirectionsBike, isSelected = selectedType == SpotType.MOTORCYCLE, onClick = { selectedType = SpotType.MOTORCYCLE }, modifier = Modifier.weight(1f))
-                        Spacer(modifier = Modifier.width(12.dp))
-                        TypeSelectorItem(label = "PMR", icon = Icons.AutoMirrored.Filled.Accessible, isSelected = selectedType == SpotType.DISABLED, onClick = { selectedType = SpotType.DISABLED }, modifier = Modifier.weight(1f))
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Campos Marca y Color
-                FormTextField(label = "Marca", value = brand, onValueChange = { brand = it }, placeholder = "Ej: Toyota")
-                Spacer(modifier = Modifier.height(16.dp))
-                FormTextField(label = "Color", value = color, onValueChange = { color = it }, placeholder = "Ej: Rojo")
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Botón Final
-                Button(
-                    onClick = {
-                        // Validación básica (puedes mejorarla)
-                        if (plate.isNotEmpty() && brand.isNotEmpty() && color.isNotEmpty()) {
-                            onAddVehicle(plate, brand, color, selectedType)
-                            onDismiss() // Cierra el diálogo al añadir
-                        }
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                modifier = Modifier
+                    .fillMaxWidth(0.95f)
+                    .wrapContentHeight() // Permite que la tarjeta se encoja y deje espacio para el teclado
+                    .padding(horizontal = 16.dp, vertical = 24.dp)
+                    .pointerInput(Unit) {
+                        detectTapGestures(onTap = { focusManager.clearFocus() })
                     },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
-                ) { Text("Añadir Vehículo", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White) }
+                elevation = CardDefaults.cardElevation(8.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(24.dp)
+                        .verticalScroll(scrollState),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    // Cabecera
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        Arrangement.SpaceBetween, Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Añadir Vehículo",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextDark
+                        )
+                        IconButton(onClick = onDismiss) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Cerrar"
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Campo Matrícula
+                    FormTextField(
+                        label = "Matrícula",
+                        value = plate,
+                        onValueChange = { plate = it },
+                        placeholder = "Ej: 1234ABC"
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Selector Tipo de Vehículo (La cuadrícula)
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            "Tipo de vehículo",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextDark
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Fila 1
+                        Row {
+                            TypeSelectorItem(
+                                label = "Combustión",
+                                icon = Icons.Default.DirectionsCar,
+                                isSelected = selectedType == SpotType.COMBUSTION,
+                                onClick = { selectedType = SpotType.COMBUSTION },
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            TypeSelectorItem(
+                                label = "Eléctrico",
+                                icon = Icons.Default.ElectricBolt,
+                                isSelected = selectedType == SpotType.ELECTRIC,
+                                onClick = { selectedType = SpotType.ELECTRIC },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        // Fila 2
+                        Row {
+                            TypeSelectorItem(
+                                label = "Moto",
+                                icon = Icons.AutoMirrored.Filled.DirectionsBike,
+                                isSelected = selectedType == SpotType.MOTORCYCLE,
+                                onClick = { selectedType = SpotType.MOTORCYCLE },
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            TypeSelectorItem(
+                                label = "PMR",
+                                icon = Icons.AutoMirrored.Filled.Accessible,
+                                isSelected = selectedType == SpotType.DISABLED,
+                                onClick = { selectedType = SpotType.DISABLED },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Campos Marca y Color
+                    FormTextField(
+                        label = "Marca",
+                        value = brand,
+                        onValueChange = { brand = it },
+                        placeholder = "Ej: Toyota"
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    FormTextField(
+                        label = "Color",
+                        value = color,
+                        onValueChange = { color = it },
+                        placeholder = "Ej: Rojo"
+                    )
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    // Botón Final
+                    Button(
+                        onClick = {
+                            // Validación básica
+                            if (plate.isNotEmpty() && brand.isNotEmpty() && color.isNotEmpty()) {
+                                onAddVehicle(plate, brand, color, selectedType)
+                                onDismiss() // Cierra el diálogo al añadir
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
+                    ) {
+                        Text(
+                            "Añadir Vehículo",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
             }
         }
     }

@@ -173,23 +173,34 @@ fun AppNavigation(navController: NavHostController) {
 @Composable
 fun BottomNavigationBar(currentRoute: String?, onNavigate: (String) -> Unit) {
     NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
+        val navItemColors = NavigationBarItemDefaults.colors(
+            selectedIconColor = OrangePrimary,       // Color del icono cuando está seleccionado
+            selectedTextColor = OrangePrimary,       // Color del texto cuando está seleccionado
+            indicatorColor = OrangePrimary.copy(alpha = 0.1f), // Color del "highlight" (fondo redondeado)
+            unselectedIconColor = Color.Gray,        // Color del icono no seleccionado
+            unselectedTextColor = Color.Gray         // Color del texto no seleccionado
+        )
+
         NavigationBarItem(
             selected = currentRoute == "booking",
             onClick = { onNavigate("booking") },
             icon = { Icon(Icons.Default.Add, null) },
-            label = { Text("Reserva") }
+            label = { Text("Reserva") },
+            colors = navItemColors
         )
         NavigationBarItem(
             selected = currentRoute == "my_bookings",
             onClick = { onNavigate("my_bookings") },
             icon = { Icon(Icons.Default.CalendarMonth, null) },
-            label = { Text("Mis Reservas") }
+            label = { Text("Mis Reservas") },
+            colors = navItemColors
         )
         NavigationBarItem(
             selected = currentRoute == "profile",
             onClick = { onNavigate("profile") },
             icon = { Icon(Icons.Default.PersonOutline, null) },
-            label = { Text("Perfil") }
+            label = { Text("Perfil") },
+            colors = navItemColors
         )
     }
 }

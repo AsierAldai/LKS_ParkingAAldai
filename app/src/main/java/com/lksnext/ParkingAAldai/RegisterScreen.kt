@@ -1,6 +1,7 @@
 package com.lksnext.ParkingAAldai
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -15,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -37,9 +39,11 @@ fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager, dao: App
     var confirmPassword by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("")}
     val scope = rememberCoroutineScope()
-    
+
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
+
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -49,6 +53,11 @@ fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager, dao: App
             modifier = Modifier
                 .fillMaxSize()
                 .safeDrawingPadding()
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = {
+                        focusManager.clearFocus()
+                    })
+                }
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -106,7 +115,7 @@ fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager, dao: App
                 label = "Correo electrónico",
                 value = email,
                 onValueChange = { email = it },
-                placeholder = "correo@ejemplo.com"
+                placeholder = "correo@lks.com"
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -150,16 +159,19 @@ fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager, dao: App
             // Register Button
             Button(
                 onClick = {
-                    if (email.isEmpty() || password.isEmpty()){
+                    val emailTrimmed = email.trim()
+                    if (emailTrimmed.isEmpty() || password.isEmpty()) {
                         errorMessage = "Completa todos los campos"
+                    } else if (!emailTrimmed.endsWith("@lks.com")){
+                        errorMessage = "El correo debe terminar en @lks.com"
                     } else if (password != confirmPassword){
                         errorMessage = "Las contraseñas no coinciden"
                     } else{
-                        val success = authManager.registerUser(email, username, password)
+                        val success = authManager.registerUser(emailTrimmed, password)
                         if (success){
                             scope.launch{
                                 val newUser = UserEntity(
-                                    email = email,
+                                    email = emailTrimmed,
                                     name = name,
                                     username = username,
                                     phone = phone
@@ -168,7 +180,7 @@ fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager, dao: App
                                 onBackToLogin()
                             }
                         } else{
-                            errorMessage = "El usuario ya existe"
+                            errorMessage = "Este correo ya está registrado"
                         }
                     }
                 },
