@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1035744266841",
+    "project_id": "lksparkingaaldai",
+    "storage_bucket": "lksparkingaaldai.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1035744266841:android:82ea1e98ad40510fb03f48",
+        "android_client_info": {
+          "package_name": "com.lksnext.ParkingAAldai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCUlyJAYcObkB5C-hWeomNaVEZw4qUW5WA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
