@@ -2,12 +2,26 @@ package com.lksnext.ParkingAAldai
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.google.firebase.auth.FirebaseAuth
 
 class AuthManager(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
     companion object {
         private const val KEY_LOGGED_IN_USER = "current_user_email"
+    }
+
+    fun registerWithFirebase(email: String, pass: String, onResulet: (Boolean, String?) -> Unit) {
+        auth.createUserWithEmailAndPassword(email, pass)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    prefs.edit().putString(KEY_LOGGED_IN_USER, email).apply()
+                    onResulet(true, null)
+                } else {
+                    onResulet(false, task.exception?.message)
+                }
+            }
     }
 
     fun registerUser(email: String, pass: String): Boolean {

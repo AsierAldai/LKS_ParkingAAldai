@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavDirections
 import com.lksnext.ParkingAAldai.ui.theme.BackgroundBeige
 import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 import com.lksnext.ParkingAAldai.ui.theme.TextDark
@@ -168,19 +169,21 @@ fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager, dao: App
                         errorMessage = "Las contraseñas no coinciden"
                     } else{
                         val success = authManager.registerUser(emailTrimmed, password)
-                        if (success){
-                            scope.launch{
-                                val newUser = UserEntity(
-                                    email = emailTrimmed,
-                                    name = name,
-                                    username = username,
-                                    phone = phone
-                                )
-                                dao.insertUser(newUser)
-                                onBackToLogin()
+                        authManager.registerWithFirebase(emailTrimmed, password) { success, error ->
+                            if (success) {
+                                scope.launch {
+                                    val newUser = UserEntity(
+                                        email = emailTrimmed,
+                                        name = name,
+                                        username = username,
+                                        phone = phone
+                                    )
+                                    dao.insertUser(newUser)
+                                    onBackToLogin()
+                                }
+                            } else {
+                                errorMessage = "Este correo ya está registrado"
                             }
-                        } else{
-                            errorMessage = "Este correo ya está registrado"
                         }
                     }
                 },

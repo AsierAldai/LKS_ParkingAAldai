@@ -3,4 +3,14 @@ plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.kotlin.ksp) apply false
+    alias(libs.plugins.google.services) apply false
+    alias(libs.plugins.firebase.crashlytics) apply false
+    id("org.sonarqube") version "7.3.0.8318"
+}
+
+sonar {
+    properties {
+        property("sonar.projectKey", "AsierAldai_LKS_ParkingAAldai")
+        property("sonar.organization", "asieraldai")
+    }
 }
