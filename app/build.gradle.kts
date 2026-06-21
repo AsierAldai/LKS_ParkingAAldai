@@ -4,6 +4,14 @@ plugins {
     alias(libs.plugins.kotlin.ksp)
     alias(libs.plugins.google.services)
     alias(libs.plugins.firebase.crashlytics)
+    alias(libs.plugins.sonar)
+}
+
+sonar {
+    properties {
+        property("sonar.projectKey", "AsierAldai_LKS_ParkingAAldai")
+        property("sonar.organization", "asieraldai")
+    }
 }
 
 android {
