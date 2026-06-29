@@ -3,16 +3,17 @@ package com.lksnext.ParkingAAldai
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 
 class ProfileViewModel(
-    private val dao: AppDao,
+    private val repository: FirebaseRepository,
     private val authManager: AuthManager
 ) : ViewModel() {
 
-    private fun getCurrentEmail() = authManager.getUserEmail() ?: ""
+    private fun getCurrentEmail() = authManager.getUserEmailWithFirebase() ?: ""
 
     // Información Personal
     var name = mutableStateOf("Usuario")
@@ -23,7 +24,7 @@ class ProfileViewModel(
     private val _refreshTrigger = MutableStateFlow(System.currentTimeMillis())
 
     val vehicles: StateFlow<List<VehicleEntity>> = _refreshTrigger
-        .flatMapLatest { _ -> dao.getVehiclesByUser(getCurrentEmail()) }
+        .flatMapLatest { _ -> repository.getVehiclesByUser(getCurrentEmail()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
@@ -36,7 +37,7 @@ class ProfileViewModel(
         _refreshTrigger.value = System.currentTimeMillis()
 
         viewModelScope.launch {
-            val user = dao.getUser(currentEmail)
+            val user = repository.getUser(currentEmail)
             if (user != null) {
                 name.value = user.name
                 username.value = user.username
@@ -52,7 +53,7 @@ class ProfileViewModel(
 
     fun addVehicle(plate: String, brand: String, color: String, type: SpotType) {
         viewModelScope.launch {
-            dao.insertVehicle(
+            repository.insertVehicle(
                 VehicleEntity(
                     ownerEmail = getCurrentEmail(),
                     plate = plate,
@@ -66,26 +67,35 @@ class ProfileViewModel(
 
     fun deleteVehicle(vehicle: VehicleEntity) {
         viewModelScope.launch {
-            dao.deleteVehicle(vehicle)
+            repository.deleteVehicle(vehicle)
         }
     }
 
-    fun updateProfile(newName: String, newUsername: String, newEmail: String, newPhone: String) {
-        viewModelScope.launch {
-            val oldEmail = getCurrentEmail()
-            authManager.updateSession(oldEmail, newEmail)
-            if (oldEmail != newEmail) {
-                dao.updateVehiclesOwnerEmail(oldEmail, newEmail)
-                dao.deleteUserByEmail(oldEmail)
+    var errorMessage = mutableStateOf("")
+
+    fun updateProfile(newName: String, newUsername: String, newEmail: String, newPhone: String, currentPassword: String) {
+        val oldEmail = getCurrentEmail()
+        authManager.updateSessionWithFirebase(newEmail, currentPassword) { success, firebaseError ->
+            if (success) {
+                errorMessage.value = ""
+
+                viewModelScope.launch {
+                    if (oldEmail != newEmail) {
+                        repository.updateVehiclesOwnerEmail(oldEmail, newEmail)
+                        repository.deleteUserByEmail(oldEmail)
+                    }
+                    val updatedUser = UserEntity(newEmail, newName, newUsername, newPhone)
+                    repository.insertUser(updatedUser)
+                    loadUserData()
+                }
+            } else {
+                errorMessage.value = firebaseError ?: "Error al actualizar el perfil."
             }
-            val updatedUser = UserEntity(newEmail, newName, newUsername, newPhone)
-            dao.insertUser(updatedUser)
-            loadUserData()
         }
     }
 
     fun logout() {
-        authManager.logout()
+        authManager.logoutWithFirebase()
         name.value = "Usuario"
         email.value = ""
     }

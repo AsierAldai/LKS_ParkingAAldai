@@ -71,6 +71,7 @@ dependencies {
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.auth)
     implementation("com.google.firebase:firebase-perf")
+    implementation(libs.firebase.firestore)
 
     debugImplementation(composeBom)
     debugImplementation(libs.androidx.compose.ui.tooling)

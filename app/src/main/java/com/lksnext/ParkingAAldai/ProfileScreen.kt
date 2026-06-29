@@ -146,9 +146,10 @@ fun ProfileScreen(onNavigate: (String) -> Unit, viewModel: ProfileViewModel) {
             currentUsername = viewModel.username.value,
             currentEmail = viewModel.email.value,
             currentPhone = viewModel.phone.value,
+            currentPassword = "",
             onDismiss = { showEditProfileDialog = false },
-            onSave = { n, u, e, p ->
-                viewModel.updateProfile(n,u,e,p)
+            onSave = { n, u, e, p, pass ->
+                viewModel.updateProfile(n,u,e,p, pass)
                 showEditProfileDialog = false
             }
         )
@@ -243,14 +244,16 @@ fun EditProfileDialog(
     currentUsername: String,
     currentEmail: String,
     currentPhone: String,
+    currentPassword: String,
     onDismiss: () -> Unit,
-    onSave: (String, String, String, String) -> Unit
+    onSave: (String, String, String, String, String) -> Unit
 ) {
     // Estados locales para editar los campos
     var name by remember { mutableStateOf(currentName) }
     var username by remember { mutableStateOf(currentUsername) }
     var email by remember { mutableStateOf(currentEmail) }
     var phone by remember { mutableStateOf(currentPhone) }
+    var pass by remember { mutableStateOf(currentPassword)}
 
     val focusManager = LocalFocusManager.current
 
@@ -303,7 +306,7 @@ fun EditProfileDialog(
                             Button(
                                 onClick = {
                                     focusManager.clearFocus()
-                                    onSave(name, username, email, phone)
+                                    onSave(name, username, email, phone, pass)
                                 },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = Color(
@@ -351,6 +354,14 @@ fun EditProfileDialog(
                         value = phone,
                         onValueChange = { phone = it },
                         placeholder = "Ej: +34 612 345 678"
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    EditField(
+                        label = "Contraseña actual (Requerido para guardar cambios)",
+                        value = pass,
+                        onValueChange = { pass = it },
+                        placeholder = "Introduce tu contraseña actual"
                     )
                 }
             }

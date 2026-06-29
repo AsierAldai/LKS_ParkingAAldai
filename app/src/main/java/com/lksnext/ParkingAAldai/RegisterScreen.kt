@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -31,7 +32,7 @@ import com.lksnext.ParkingAAldai.ui.theme.TextDark
 import kotlinx.coroutines.launch
 
 @Composable
-fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager, dao: AppDao) {
+fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager, repository: FirebaseRepository) {
     var name by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -168,8 +169,7 @@ fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager, dao: App
                     } else if (password != confirmPassword){
                         errorMessage = "Las contraseñas no coinciden"
                     } else{
-                        val success = authManager.registerUser(emailTrimmed, password)
-                        authManager.registerWithFirebase(emailTrimmed, password) { success, error ->
+                        authManager.registerWithFirebase(emailTrimmed, password) { success, firebaseError ->
                             if (success) {
                                 scope.launch {
                                     val newUser = UserEntity(
@@ -178,11 +178,11 @@ fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager, dao: App
                                         username = username,
                                         phone = phone
                                     )
-                                    dao.insertUser(newUser)
+                                    repository.insertUser(newUser)
                                     onBackToLogin()
                                 }
                             } else {
-                                errorMessage = "Este correo ya está registrado"
+                                errorMessage = firebaseError ?: "Este correo ya está registrado"
                             }
                         }
                     }
@@ -268,7 +268,7 @@ fun RegisterTextField(
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
 @Composable
 fun RegisterScreenPreview() {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val db = AppDatabase.getDatabase(context)
-    RegisterScreen(onBackToLogin = {}, authManager = AuthManager(context), dao = db.appDao())
+    val context = LocalContext.current
+    val repository = remember { FirebaseRepository() }
+    RegisterScreen(onBackToLogin = {}, authManager = AuthManager(context), repository = repository)
 }

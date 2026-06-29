@@ -37,15 +37,14 @@ fun AppNavigation(navController: NavHostController) {
     // Definimos qué pantallas NO deben mostrar la barra inferior (Login, etc.)
     val showBars = currentRoute in listOf("booking", "my_bookings", "profile")
 
-    val database = remember { AppDatabase.getDatabase(context)}
-    val dao = database.appDao()
+    val repo = remember { FirebaseRepository() }
 
 // Usa esto en lugar del remember
     val profileViewModel: ProfileViewModel = viewModel(
         factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                return ProfileViewModel(dao, authManager) as T
+                return ProfileViewModel(repo, authManager) as T
             }
         }
     )
@@ -67,7 +66,7 @@ fun AppNavigation(navController: NavHostController) {
                         )
                     },
                     actions = {
-                        val unreadCount by dao.getUnreadCount(profileViewModel.email.value).collectAsState(initial = 0)
+                        val unreadCount by repo.getUnreadCount(profileViewModel.email.value).collectAsState(initial = 0)
 
                         IconButton(
                             onClick = { navController.navigate("notifications") },
@@ -141,7 +140,7 @@ fun AppNavigation(navController: NavHostController) {
                 RegisterScreen(
                     onBackToLogin = { navController.popBackStack() },
                     authManager = authManager,
-                    dao = dao
+                    repository = repo
                 )
             }
 
@@ -149,10 +148,10 @@ fun AppNavigation(navController: NavHostController) {
                 ForgotPasswordScreen(onBack = { navController.popBackStack() })
             }
             composable("booking") {
-                BookingScreen(onNavigate = { navController.navigate(it) }, dao, profileViewModel)
+                BookingScreen(onNavigate = { navController.navigate(it) }, repo, profileViewModel)
             }
             composable("my_bookings") {
-                MyBookingsScreen(dao, profileViewModel)
+                MyBookingsScreen(repo, profileViewModel)
             }
             composable("profile") {
                 ProfileScreen(
@@ -162,7 +161,7 @@ fun AppNavigation(navController: NavHostController) {
             }
             composable("notifications") {
                 NotificationsScreen(
-                    dao,
+                    repo,
                     profileViewModel,
                     onBack = { navController.popBackStack() })
             }

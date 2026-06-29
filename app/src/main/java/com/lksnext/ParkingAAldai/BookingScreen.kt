@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
@@ -61,7 +62,7 @@ fun Long.normalizeToStartOfDay(): Long {
 @Composable
 fun BookingScreen(
     onNavigate: (String) -> Unit,
-    dao: AppDao,
+    repository: FirebaseRepository,
     profileViewModel: ProfileViewModel
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -84,9 +85,9 @@ fun BookingScreen(
     val selectedDateFormatted = dateFormatter.format(Date(selectedDateMillis))
 
     // Obtenemos TODAS las reservas del día seleccionado para el mapa
-    val allReservationsToday by remember(selectedDateMillis) {
-        dao.getAllReservationsByDate(selectedDateMillis)
-        }.collectAsState(initial = emptyList())
+    val allReservationsToday by produceState<List<ReservationEntity>>(initialValue = emptyList(), selectedDateMillis) {
+        repository.getAllReservationsByDate(selectedDateMillis).collect { value = it}
+    }
 
     // Estados de los filtros
     var filterCombustion by remember { mutableStateOf(false) }
@@ -101,10 +102,13 @@ fun BookingScreen(
     val userVehicles by profileViewModel.vehicles.collectAsState()
 
     // Obtenemos reservas futuras de la plaza (incluyendo otros días para mostrar información)
-    val futureReservations by if (selectedSpotIndex != null) {
-        dao.getFutureReservationsBySpot(selectedSpotIndex!!, selectedDateMillis).collectAsState(initial = emptyList())
-    } else {
-        remember { mutableStateOf(emptyList<ReservationEntity>()) }
+    val futureReservations by produceState<List<ReservationEntity>>(initialValue = emptyList(), selectedSpotIndex, selectedDateMillis) {
+        val index = selectedSpotIndex
+        if (index != null) {
+            repository.getFutureReservationsBySpot(index, selectedDateMillis).collect { value = it }
+        } else {
+            value = emptyList()
+        }
     }
 
     val spots = remember {
@@ -410,8 +414,8 @@ fun BookingScreen(
                             vehiclePlate = vehicle.plate,
                             reservationName = "Reserva en plaza $selectedSpotIndex"
                         )
-                        dao.insertReservation(res)
-                        dao.insertNotification(
+                        repository.insertReservation(res)
+                        repository.insertNotification(
                             NotificationEntity(
                                 userEmail = vehicle.ownerEmail,
                                 title = "Tu reserva en la plaza $prefix-$selectedSpotIndex ha sido confirmada",
@@ -694,16 +698,16 @@ suspend fun PointerInputScope.detectTransformGestures(
 @Preview(showBackground = true)
 @Composable
 fun BookingScreenPreview() {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val database = AppDatabase.getDatabase(context)
-    val dao = database.appDao()
+    val context = LocalContext.current
 
-    val authManager = AuthManager(context)
-    val profileViewModel = ProfileViewModel(dao, authManager)
+    val repository = remember { FirebaseRepository() }
+
+    val authManager = remember { AuthManager(context) }
+    val profileViewModel = remember { ProfileViewModel(repository, authManager) }
 
     BookingScreen(
         onNavigate = {},
-        dao = dao,
+        repository = repository,
         profileViewModel = profileViewModel
     )
 }

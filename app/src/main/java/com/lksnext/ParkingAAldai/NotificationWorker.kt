@@ -13,16 +13,20 @@ class NotificationWorker(
         val email = inputData.getString("email") ?: return Result.failure()
         val title = inputData.getString("title") ?: return Result.failure()
 
-        val dao = AppDatabase.getDatabase(applicationContext).appDao()
+        val repo = FirebaseRepository()
 
-        dao.insertNotification(
-            NotificationEntity(
-                userEmail = email,
-                title = title,
-                timestamp = System.currentTimeMillis(),
-                isRead = false
+        try {
+            repo.insertNotification(
+                NotificationEntity(
+                    userEmail = email,
+                    title = title,
+                    timestamp = System.currentTimeMillis(),
+                    isRead = false
+                )
             )
-        )
-        return Result.success()
+            return Result.success()
+        } catch (e: Exception) {
+            return Result.retry()
+        }
     }
 }

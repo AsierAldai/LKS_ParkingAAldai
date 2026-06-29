@@ -153,10 +153,14 @@ fun LoginScreen(
                     val emailTrimmed = email.trim()
                     if (!emailTrimmed.endsWith("@lks.com")){
                         errorText = "Usa tu correo corporativo @lks.com"
-                    } else if (authManager.loginUser(emailTrimmed, password)){
-                        onLoginSuccess()
-                    } else{
-                        errorText = "Correo o contraseña incorrectos"
+                    } else {
+                        authManager.loginWithFirebase(emailTrimmed, password) { success, firebaseError ->
+                            if (success) {
+                                onLoginSuccess()
+                            } else {
+                                errorText = firebaseError ?: "Correo o contraseña incorrectos"
+                            }
+                        }
                     }
                 },
                 modifier = Modifier

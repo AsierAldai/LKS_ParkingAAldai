@@ -37,12 +37,12 @@ import java.util.*
 
 @Composable
 fun MyBookingsScreen(
-    dao: AppDao,
+    repo: FirebaseRepository,
     profileViewModel: ProfileViewModel
 ) {
     val userEmail = profileViewModel.email.value
     val monthAgoMillis = remember {System.currentTimeMillis() - (30L * 24 * 60 * 60 * 1000L) }
-    val reservations by dao.getReservationsByUser(userEmail, monthAgoMillis).collectAsState(initial = emptyList())
+    val reservations by repo.getReservationsByUser(userEmail, monthAgoMillis).collectAsState(initial = emptyList())
     val scope = rememberCoroutineScope()
 
     var selectedReservation by remember { mutableStateOf<ReservationEntity?>(null) }
@@ -51,7 +51,7 @@ fun MyBookingsScreen(
     var showEditDialog by remember { mutableStateOf(false) }
 
     val otherReservations by if (selectedReservation != null) {
-        dao.getOtherReservationsForSpot(
+        repo.getOtherReservationsForSpot(
             selectedReservation!!.spotIndex,
             selectedReservation!!.dateMillis,
             selectedReservation!!.id
@@ -102,7 +102,7 @@ fun MyBookingsScreen(
             onDismiss = { showDetails = false },
             onDelete = {
                 scope.launch {
-                    dao.deleteReservation(selectedReservation!!)
+                    repo.deleteReservation(selectedReservation!!)
                     showDetails = false
                     selectedReservation = null
                 }
@@ -126,7 +126,7 @@ fun MyBookingsScreen(
                         startTime = newStart,
                         endTime = newEnd
                     )
-                    dao.updateReservation(updated)
+                    repo.updateReservation(updated)
                     showEditDialog = false
                     selectedReservation = null
                 }

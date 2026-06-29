@@ -31,15 +31,15 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificationsScreen(dao: AppDao, profileViewModel: ProfileViewModel, onBack: () -> Unit) {
+fun NotificationsScreen(repo: FirebaseRepository, profileViewModel: ProfileViewModel, onBack: () -> Unit) {
     val userEmail = profileViewModel.email.value
-    val notifications by dao.getNotificationsByUser(userEmail).collectAsState(initial = emptyList())
+    val notifications by repo.getNotificationsByUser(userEmail).collectAsState(initial = emptyList())
     val scope = rememberCoroutineScope()
 
     // Marcar como leídas al salir
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
         scope.launch {
-            dao.markAllAsRead(userEmail)
+            repo.markAllAsRead(userEmail)
         }
     }
 
