@@ -1,4 +1,4 @@
-package com.lksnext.ParkingAAldai
+package com.lksnext.ParkingAAldai.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,12 +28,40 @@ import androidx.compose.ui.unit.sp
 import com.lksnext.ParkingAAldai.ui.theme.BackgroundBeige
 import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 import com.lksnext.ParkingAAldai.ui.theme.TextDark
+import com.lksnext.ParkingAAldai.ui.viewmodels.ForgotPasswordViewModel
 
 @Composable
-fun ForgotPasswordScreen(onBack: () -> Unit) {
-    var selectedMethod by remember { mutableStateOf("email") } // "email" or "phone"
-    var emailValue by remember { mutableStateOf("") }
-    var phoneValue by remember { mutableStateOf("") }
+fun ForgotPasswordScreen(
+    onBack: () -> Unit,
+    viewModel: ForgotPasswordViewModel
+) {
+    ForgotPasswordScreenContent(
+        selectedMethod = viewModel.selectedMethod.value,
+        emailValue = viewModel.emailValue.value,
+        phoneValue = viewModel.phoneValue.value,
+        errorMessage = viewModel.errorMessage.value,
+        successMessage = viewModel.successMessage.value,
+        onMethodSelected = { viewModel.selectedMethod.value = it },
+        onEmailChange = { viewModel.emailValue.value = it },
+        onPhoneChange = { viewModel.phoneValue.value = it },
+        onResetPasswordClick = { viewModel.resetPassword() },
+        onBack = onBack
+    )
+}
+
+@Composable
+private fun ForgotPasswordScreenContent(
+    selectedMethod: String,
+    emailValue: String,
+    phoneValue: String,
+    errorMessage: String,
+    successMessage: String,
+    onMethodSelected: (String) -> Unit,
+    onEmailChange: (String) -> Unit,
+    onPhoneChange: (String) -> Unit,
+    onResetPasswordClick: () -> Unit,
+    onBack: () -> Unit
+) {
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -117,7 +145,7 @@ fun ForgotPasswordScreen(onBack: () -> Unit) {
                     subtitle = "Recibe un enlace de recuperación",
                     icon = Icons.Default.Email,
                     isSelected = selectedMethod == "email",
-                    onClick = { selectedMethod = "email" }
+                    onClick = { onMethodSelected("email") }
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -128,7 +156,7 @@ fun ForgotPasswordScreen(onBack: () -> Unit) {
                     subtitle = "Recibe un código SMS",
                     icon = Icons.Default.Phone,
                     isSelected = selectedMethod == "phone",
-                    onClick = { selectedMethod = "phone" }
+                    onClick = { onMethodSelected("phone") }
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -176,12 +204,16 @@ fun ForgotPasswordScreen(onBack: () -> Unit) {
                     )
                     OutlinedTextField(
                         value = if (selectedMethod == "email") emailValue else phoneValue,
-                        onValueChange = { if (selectedMethod == "email") emailValue = it else phoneValue = it },
-                        placeholder = { 
+                        onValueChange = {
+                            if (selectedMethod == "email") onEmailChange(it) else onPhoneChange(
+                                it
+                            )
+                        },
+                        placeholder = {
                             Text(
                                 text = if (selectedMethod == "email") "ejemplo@correo.com" else "+34 600 000 000",
                                 color = Color.Gray.copy(alpha = 0.6f)
-                            ) 
+                            )
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
@@ -197,7 +229,7 @@ fun ForgotPasswordScreen(onBack: () -> Unit) {
 
                 // Send Button
                 Button(
-                    onClick = { /* Handle send */ },
+                    onClick = { onResetPasswordClick() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
@@ -209,6 +241,29 @@ fun ForgotPasswordScreen(onBack: () -> Unit) {
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
+                    )
+                }
+
+
+                if (errorMessage.isNotEmpty()) {
+                    Text(
+                        errorMessage,
+                        color = Color.Red,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, Color.Red, RoundedCornerShape(12.dp))
+                            .padding(8.dp)
+                    )
+                }
+
+                if (successMessage.isNotEmpty()) {
+                    Text(
+                        successMessage,
+                        color = Color.Green,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, Color.Green, RoundedCornerShape(12.dp))
+                            .padding(8.dp)
                     )
                 }
             }
@@ -284,5 +339,16 @@ fun RecoveryMethodCard(
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
 @Composable
 fun ForgotPasswordScreenPreview() {
-    ForgotPasswordScreen(onBack = {})
+    ForgotPasswordScreenContent(
+        selectedMethod = "email",
+        emailValue = "",
+        phoneValue = "",
+        errorMessage = "",
+        successMessage = "",
+        onMethodSelected = {},
+        onEmailChange = {},
+        onPhoneChange = {},
+        onResetPasswordClick = {},
+        onBack = {}
+    )
 }

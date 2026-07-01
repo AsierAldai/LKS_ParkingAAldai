@@ -1,4 +1,4 @@
-package com.lksnext.ParkingAAldai
+package com.lksnext.ParkingAAldai.ui.screens
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -21,6 +21,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.lksnext.ParkingAAldai.ui.components.AddVehicleDialog
+import com.lksnext.ParkingAAldai.ui.viewmodels.ProfileViewModel
+import com.lksnext.ParkingAAldai.data.models.VehicleEntity
 import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 import com.lksnext.ParkingAAldai.ui.theme.TextDark
 

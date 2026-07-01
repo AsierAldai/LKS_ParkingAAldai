@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -23,6 +24,22 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 import androidx.lifecycle.ViewModelProvider
+import com.lksnext.ParkingAAldai.auth.AuthManager
+import com.lksnext.ParkingAAldai.data.repository.FirebaseRepository
+import com.lksnext.ParkingAAldai.ui.screens.BookingScreen
+import com.lksnext.ParkingAAldai.ui.screens.ForgotPasswordScreen
+import com.lksnext.ParkingAAldai.ui.screens.LoginScreen
+import com.lksnext.ParkingAAldai.ui.screens.MyBookingsScreen
+import com.lksnext.ParkingAAldai.ui.screens.NotificationsScreen
+import com.lksnext.ParkingAAldai.ui.screens.ProfileScreen
+import com.lksnext.ParkingAAldai.ui.screens.RegisterScreen
+import com.lksnext.ParkingAAldai.ui.viewmodels.BookingViewModel
+import com.lksnext.ParkingAAldai.ui.viewmodels.ForgotPasswordViewModel
+import com.lksnext.ParkingAAldai.ui.viewmodels.LoginViewModel
+import com.lksnext.ParkingAAldai.ui.viewmodels.MyBookingsViewModel
+import com.lksnext.ParkingAAldai.ui.viewmodels.NotificationsViewModel
+import com.lksnext.ParkingAAldai.ui.viewmodels.ProfileViewModel
+import com.lksnext.ParkingAAldai.ui.viewmodels.RegisterViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,6 +55,54 @@ fun AppNavigation(navController: NavHostController) {
     val showBars = currentRoute in listOf("booking", "my_bookings", "profile")
 
     val repo = remember { FirebaseRepository() }
+
+    val loginViewModel: LoginViewModel = viewModel(
+        factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return LoginViewModel(authManager) as T
+            }
+        }
+    )
+
+    val registerViewModel: RegisterViewModel = viewModel(
+        factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return RegisterViewModel(authManager, repo) as T
+            }
+        }
+    )
+
+    val forgotPasswordViewModel: ForgotPasswordViewModel = viewModel(
+        factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return ForgotPasswordViewModel() as T
+            }
+        }
+    )
+
+    val notificationsViewModel: NotificationsViewModel = viewModel(
+        factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return NotificationsViewModel(repo, authManager) as T
+            }
+        }
+    )
+
+    val myBookingViewModel: MyBookingsViewModel = viewModel(
+        factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return MyBookingsViewModel(repo, authManager) as T
+            }
+        }
+    )
+
+    val bookingViewModel: BookingViewModel = viewModel(
+        factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return BookingViewModel(repo, authManager) as T
+            }
+        }
+    )
 
 // Usa esto en lugar del remember
     val profileViewModel: ProfileViewModel = viewModel(
@@ -133,25 +198,29 @@ fun AppNavigation(navController: NavHostController) {
                             popUpTo("login") { inclusive = true }
                         }
                     },
-                    authManager = authManager
+                    viewModel = loginViewModel
                 )
             }
             composable("register") {
                 RegisterScreen(
                     onBackToLogin = { navController.popBackStack() },
-                    authManager = authManager,
-                    repository = repo
+                    viewModel = registerViewModel
                 )
             }
 
             composable("forgot_password") {
-                ForgotPasswordScreen(onBack = { navController.popBackStack() })
+                ForgotPasswordScreen(
+                    onBack = { navController.popBackStack() },
+                    viewModel = forgotPasswordViewModel
+                )
             }
             composable("booking") {
-                BookingScreen(onNavigate = { navController.navigate(it) }, repo, profileViewModel)
+                BookingScreen(onNavigate = { navController.navigate(it) }, bookingViewModel, profileViewModel)
             }
             composable("my_bookings") {
-                MyBookingsScreen(repo, profileViewModel)
+                MyBookingsScreen(
+                    viewModel = myBookingViewModel
+                )
             }
             composable("profile") {
                 ProfileScreen(
@@ -161,9 +230,9 @@ fun AppNavigation(navController: NavHostController) {
             }
             composable("notifications") {
                 NotificationsScreen(
-                    repo,
-                    profileViewModel,
-                    onBack = { navController.popBackStack() })
+                    onBack = { navController.popBackStack() },
+                    viewModel = notificationsViewModel
+                )
             }
         }
     }

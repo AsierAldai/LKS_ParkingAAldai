@@ -1,4 +1,4 @@
-package com.lksnext.ParkingAAldai
+package com.lksnext.ParkingAAldai.ui.components
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -23,6 +23,9 @@ import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 import java.text.SimpleDateFormat
 import java.util.*
 import androidx.compose.ui.platform.LocalLocale
+import com.lksnext.ParkingAAldai.data.models.ReservationEntity
+import com.lksnext.ParkingAAldai.data.models.VehicleEntity
+import com.lksnext.ParkingAAldai.ui.screens.SpotType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

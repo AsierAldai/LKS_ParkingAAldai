@@ -1,4 +1,4 @@
-package com.lksnext.ParkingAAldai
+package com.lksnext.ParkingAAldai.data.models
 
 data class UserEntity(
     val email: String = "",

@@ -1,8 +1,10 @@
-package com.lksnext.ParkingAAldai
+package com.lksnext.ParkingAAldai.workers
 
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.lksnext.ParkingAAldai.data.models.NotificationEntity
+import com.lksnext.ParkingAAldai.data.repository.FirebaseRepository
 
 class NotificationWorker(
     context: Context,

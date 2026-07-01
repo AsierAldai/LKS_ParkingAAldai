@@ -1,10 +1,10 @@
-package com.lksnext.ParkingAAldai
+package com.lksnext.ParkingAAldai.ui.screens
 
+import com.lksnext.ParkingAAldai.ui.components.TimePickerDialog
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,35 +23,52 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.lksnext.ParkingAAldai.data.models.ReservationEntity
+import com.lksnext.ParkingAAldai.ui.components.getIconForType
+import com.lksnext.ParkingAAldai.ui.components.getSpotPrefix
 import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 import com.lksnext.ParkingAAldai.ui.theme.TextDark
-import kotlinx.coroutines.launch
+import com.lksnext.ParkingAAldai.ui.viewmodels.MyBookingsViewModel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
 fun MyBookingsScreen(
-    repo: FirebaseRepository,
-    profileViewModel: ProfileViewModel
+    viewModel: MyBookingsViewModel
 ) {
-    val userEmail = profileViewModel.email.value
-    val monthAgoMillis = remember {System.currentTimeMillis() - (30L * 24 * 60 * 60 * 1000L) }
-    val reservations by repo.getReservationsByUser(userEmail, monthAgoMillis).collectAsState(initial = emptyList())
-    val scope = rememberCoroutineScope()
+    val reservations by viewModel.bookings.collectAsState(initial = emptyList())
+
+    MyBookingsScreenContent(
+        reservations = reservations,
+        getOtherReservationsForSpot = viewModel::getOtherReservationsForSpot,
+        onCancelBooking = viewModel::cancelBooking,
+        onEditBooking = viewModel::editBooking
+    )
+}
+
+@Composable
+private fun MyBookingsScreenContent(
+    reservations: List<ReservationEntity>,
+    getOtherReservationsForSpot: (Int, Long, Int) -> Flow<List<ReservationEntity>>,
+    onCancelBooking: (ReservationEntity) -> Unit,
+    onEditBooking: (ReservationEntity, String, String, String) -> Unit
+) {
 
     var selectedReservation by remember { mutableStateOf<ReservationEntity?>(null) }
     var showDetails by remember { mutableStateOf(false) }
-
     var showEditDialog by remember { mutableStateOf(false) }
 
     val otherReservations by if (selectedReservation != null) {
-        repo.getOtherReservationsForSpot(
+        getOtherReservationsForSpot(
             selectedReservation!!.spotIndex,
             selectedReservation!!.dateMillis,
             selectedReservation!!.id
@@ -101,11 +118,9 @@ fun MyBookingsScreen(
             reservation = selectedReservation!!,
             onDismiss = { showDetails = false },
             onDelete = {
-                scope.launch {
-                    repo.deleteReservation(selectedReservation!!)
-                    showDetails = false
-                    selectedReservation = null
-                }
+               onCancelBooking(selectedReservation!!)
+                showDetails = false
+                selectedReservation = null
             },
             onEdit = {
                 showDetails = false
@@ -120,16 +135,14 @@ fun MyBookingsScreen(
             otherReservations = otherReservations,
             onDismiss = { showEditDialog = false },
             onSave = { newName, newStart, newEnd ->
-                scope.launch {
-                    val updated = selectedReservation!!.copy(
-                        reservationName = newName,
-                        startTime = newStart,
-                        endTime = newEnd
-                    )
-                    repo.updateReservation(updated)
-                    showEditDialog = false
-                    selectedReservation = null
-                }
+                onEditBooking(
+                    selectedReservation!!,
+                    newName,
+                    newStart,
+                    newEnd
+                )
+                showEditDialog = false
+                selectedReservation = null
             }
         )
     }
@@ -303,7 +316,7 @@ fun EditReservationDialog(
     var showStartPicker by remember { mutableStateOf(false) }
     var showEndPicker by remember { mutableStateOf(false) }
 
-    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    val focusManager = LocalFocusManager.current
 
     // Lógica de validación de horas
     val validationError = remember(startTime, endTime, otherReservations) {
@@ -467,4 +480,15 @@ fun TimeSelectorField(label: String, time: String, onClick: () -> Unit) {
             }
         }
     }
+}
+
+@Preview
+@Composable
+fun MyBookingsViewModelPreview() {
+    MyBookingsScreenContent(
+        reservations = emptyList(),
+        getOtherReservationsForSpot = { _, _, _ -> flowOf(emptyList()) },
+        onCancelBooking = {},
+        onEditBooking = { _, _, _, _ -> }
+    )
 }

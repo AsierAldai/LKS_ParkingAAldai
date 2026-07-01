@@ -1,12 +1,19 @@
-package com.lksnext.ParkingAAldai
+package com.lksnext.ParkingAAldai.ui.viewmodels
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.flow.*
+import com.lksnext.ParkingAAldai.auth.AuthManager
+import com.lksnext.ParkingAAldai.data.repository.FirebaseRepository
+import com.lksnext.ParkingAAldai.data.models.UserEntity
+import com.lksnext.ParkingAAldai.data.models.VehicleEntity
+import com.lksnext.ParkingAAldai.ui.screens.SpotType
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-
 
 class ProfileViewModel(
     private val repository: FirebaseRepository,
@@ -25,7 +32,7 @@ class ProfileViewModel(
 
     val vehicles: StateFlow<List<VehicleEntity>> = _refreshTrigger
         .flatMapLatest { _ -> repository.getVehiclesByUser(getCurrentEmail()) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.Companion.WhileSubscribed(5000), emptyList())
 
     init {
         loadUserData()

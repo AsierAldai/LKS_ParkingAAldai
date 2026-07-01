@@ -1,8 +1,11 @@
-package com.lksnext.ParkingAAldai
+package com.lksnext.ParkingAAldai.data.repository
 
-import android.app.Notification
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.lksnext.ParkingAAldai.data.models.NotificationEntity
+import com.lksnext.ParkingAAldai.data.models.ReservationEntity
+import com.lksnext.ParkingAAldai.data.models.UserEntity
+import com.lksnext.ParkingAAldai.data.models.VehicleEntity
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.Flow
@@ -68,28 +71,30 @@ class FirebaseRepository {
         docRef.set(finalReservation).await()
     }
 
-    fun getReservationsByUser(email: String, minDateMillis: Long): Flow<List<ReservationEntity>> = callbackFlow {
-        val listener = reservationsRef
-            .whereEqualTo("userEmail", email)
-            .whereGreaterThanOrEqualTo("dateMillis", minDateMillis)
-            .orderBy("dateMillis", Query.Direction.DESCENDING)
-            .addSnapshotListener { snapshot, _ ->
-                val list = snapshot?.toObjects(ReservationEntity::class.java) ?: emptyList()
-                this.trySendBlocking(list)
-            }
-        awaitClose { listener.remove() }
-    }
+    fun getReservationsByUser(email: String, minDateMillis: Long): Flow<List<ReservationEntity>> =
+        callbackFlow {
+            val listener = reservationsRef
+                .whereEqualTo("userEmail", email)
+                .whereGreaterThanOrEqualTo("dateMillis", minDateMillis)
+                .orderBy("dateMillis", Query.Direction.DESCENDING)
+                .addSnapshotListener { snapshot, _ ->
+                    val list = snapshot?.toObjects(ReservationEntity::class.java) ?: emptyList()
+                    this.trySendBlocking(list)
+                }
+            awaitClose { listener.remove() }
+        }
 
-    fun getReservationsBySpotAndDate(spotIndex: Int, dateMillis: Long): Flow<List<ReservationEntity>> = callbackFlow {
-        val listener = reservationsRef
-            .whereEqualTo("spotIndex", spotIndex)
-            .whereEqualTo("dateMillis", dateMillis)
-            .addSnapshotListener { snapshot, _ ->
-                val list = snapshot?.toObjects(ReservationEntity::class.java) ?: emptyList()
-                this.trySendBlocking(list)
-            }
-        awaitClose { listener.remove() }
-    }
+    fun getReservationsBySpotAndDate(spotIndex: Int, dateMillis: Long): Flow<List<ReservationEntity>> =
+        callbackFlow {
+            val listener = reservationsRef
+                .whereEqualTo("spotIndex", spotIndex)
+                .whereEqualTo("dateMillis", dateMillis)
+                .addSnapshotListener { snapshot, _ ->
+                    val list = snapshot?.toObjects(ReservationEntity::class.java) ?: emptyList()
+                    this.trySendBlocking(list)
+                }
+            awaitClose { listener.remove() }
+        }
 
     fun getAllReservationsByDate(date: Long): Flow<List<ReservationEntity>> = callbackFlow {
         val listener = reservationsRef
@@ -101,29 +106,32 @@ class FirebaseRepository {
         awaitClose { listener.remove() }
     }
 
-    fun getFutureReservationsBySpot(spotIndex: Int, minDateMillis: Long): Flow<List<ReservationEntity>> = callbackFlow {
-        val listener = reservationsRef
-            .whereEqualTo("spotIndex", spotIndex)
-            .whereGreaterThanOrEqualTo("dateMillis", minDateMillis)
-            .orderBy("dateMillis", Query.Direction.ASCENDING)
-            .orderBy("startTime", Query.Direction.ASCENDING)
-            .addSnapshotListener { snapshot, _ ->
-                val list = snapshot?.toObjects(ReservationEntity::class.java) ?: emptyList()
-                this.trySendBlocking(list)
-            }
-        awaitClose { listener.remove() }
-    }
+    fun getFutureReservationsBySpot(spotIndex: Int, minDateMillis: Long): Flow<List<ReservationEntity>> =
+        callbackFlow {
+            val listener = reservationsRef
+                .whereEqualTo("spotIndex", spotIndex)
+                .whereGreaterThanOrEqualTo("dateMillis", minDateMillis)
+                .orderBy("dateMillis", Query.Direction.ASCENDING)
+                .orderBy("startTime", Query.Direction.ASCENDING)
+                .addSnapshotListener { snapshot, _ ->
+                    val list = snapshot?.toObjects(ReservationEntity::class.java) ?: emptyList()
+                    this.trySendBlocking(list)
+                }
+            awaitClose { listener.remove() }
+        }
 
-    fun getOtherReservationsForSpot(spotIndex: Int, dateMillis: Long, excludeId: Int): Flow<List<ReservationEntity>> = callbackFlow {
-        val listener = reservationsRef
-            .whereEqualTo("spotIndex", spotIndex)
-            .whereEqualTo("dateMillis", dateMillis)
-            .addSnapshotListener { snapshots, _ ->
-                val list = snapshots?.toObjects(ReservationEntity::class.java)?.filter { it.id != excludeId } ?: emptyList()
-                this.trySendBlocking(list)
-            }
-        awaitClose { listener.remove() }
-    }
+    fun getOtherReservationsForSpot(spotIndex: Int, dateMillis: Long, excludeId: Int): Flow<List<ReservationEntity>> =
+        callbackFlow {
+            val listener = reservationsRef
+                .whereEqualTo("spotIndex", spotIndex)
+                .whereEqualTo("dateMillis", dateMillis)
+                .addSnapshotListener { snapshots, _ ->
+                    val list = snapshots?.toObjects(ReservationEntity::class.java)
+                        ?.filter { it.id != excludeId } ?: emptyList()
+                    this.trySendBlocking(list)
+                }
+            awaitClose { listener.remove() }
+        }
 
     suspend fun deleteReservation(reservation: ReservationEntity) {
         val snapshot = reservationsRef.whereEqualTo("id", reservation.id).get().await()
@@ -153,7 +161,7 @@ class FirebaseRepository {
                 val list = snapshot?.toObjects(NotificationEntity::class.java) ?: emptyList()
                 this.trySendBlocking(list)
             }
-        awaitClose{ listener.remove() }
+        awaitClose { listener.remove() }
     }
 
     suspend fun markAllAsRead(email: String) {
@@ -177,6 +185,6 @@ class FirebaseRepository {
                 val size = snapshot?.size() ?: 0
                 this.trySendBlocking(size)
             }
-        awaitClose{ listener.remove() }
+        awaitClose { listener.remove() }
     }
 }

@@ -1,4 +1,4 @@
-package com.lksnext.ParkingAAldai
+package com.lksnext.ParkingAAldai.auth
 
 import android.content.Context
 import android.content.SharedPreferences
