@@ -3,10 +3,10 @@ package com.lksnext.ParkingAAldai.ui.viewmodels
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lksnext.ParkingAAldai.auth.AuthManager
-import com.lksnext.ParkingAAldai.data.repository.FirebaseRepository
+import com.lksnext.ParkingAAldai.auth.AuthDataSource
 import com.lksnext.ParkingAAldai.data.models.UserEntity
 import com.lksnext.ParkingAAldai.data.models.VehicleEntity
+import com.lksnext.ParkingAAldai.data.repository.ParkingRepository
 import com.lksnext.ParkingAAldai.ui.screens.SpotType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -16,8 +16,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class ProfileViewModel(
-    private val repository: FirebaseRepository,
-    private val authManager: AuthManager
+    private val repository: ParkingRepository,
+    private val authManager: AuthDataSource
 ) : ViewModel() {
 
     private fun getCurrentEmail() = authManager.getUserEmailWithFirebase() ?: ""

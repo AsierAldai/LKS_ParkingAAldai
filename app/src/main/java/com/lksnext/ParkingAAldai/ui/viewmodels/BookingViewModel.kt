@@ -4,11 +4,11 @@ package com.lksnext.ParkingAAldai.ui.viewmodels
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lksnext.ParkingAAldai.auth.AuthManager
+import com.lksnext.ParkingAAldai.auth.AuthDataSource
 import com.lksnext.ParkingAAldai.data.models.NotificationEntity
 import com.lksnext.ParkingAAldai.data.models.ReservationEntity
 import com.lksnext.ParkingAAldai.data.models.VehicleEntity
-import com.lksnext.ParkingAAldai.data.repository.FirebaseRepository
+import com.lksnext.ParkingAAldai.data.repository.ParkingRepository
 import com.lksnext.ParkingAAldai.ui.components.getSpotPrefix
 import com.lksnext.ParkingAAldai.ui.screens.SpotType
 import com.lksnext.ParkingAAldai.ui.screens.normalizeToStartOfDay
@@ -17,8 +17,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class BookingViewModel(
-    private val repo: FirebaseRepository,
-    private val authManager: AuthManager
+    private val repo: ParkingRepository,
+    private val authManager: AuthDataSource
 ) : ViewModel() {
     var reservationName = mutableStateOf("")
     var errorMessage = mutableStateOf("")
@@ -65,7 +65,7 @@ class BookingViewModel(
                     .filter { it.dateMillis == selectedDateMillis }
 
                 if (BookingValidator.hasOverlap(start, end, existingReservations)) {
-                    errorMessage.value = "Esta plaza ya esta ocupada en ese horario"
+                    errorMessage.value = "Esta plaza ya está ocupada en ese horario"
                     return@launch
                 }
 

@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
-class FirebaseRepository {
+class FirebaseRepository : ParkingRepository {
     private val db = FirebaseFirestore.getInstance()
 
     private val usersRef = db.collection("users")
@@ -21,26 +21,26 @@ class FirebaseRepository {
     private val notificationsRef = db.collection("notifications")
 
 
-    suspend fun insertUser(user: UserEntity) {
+    override suspend fun insertUser(user: UserEntity) {
         usersRef.document(user.email).set(user).await()
     }
 
-    suspend fun getUser(email: String): UserEntity? {
+    override suspend fun getUser(email: String): UserEntity? {
         val snapshot = usersRef.document(email).get().await()
         return snapshot.toObject(UserEntity::class.java)
     }
 
-    suspend fun deleteUserByEmail(email: String) {
+    override suspend fun deleteUserByEmail(email: String) {
         usersRef.document(email).delete().await()
     }
 
-    suspend fun insertVehicle(vehicle: VehicleEntity) {
+    override suspend fun insertVehicle(vehicle: VehicleEntity) {
         val docRef = if (vehicle.id == 0) vehiclesRef.document() else vehiclesRef.document(vehicle.id.toString())
         val finalVehicle = vehicle.copy(id = docRef.id.hashCode())
         docRef.set(finalVehicle).await()
     }
 
-    fun getVehiclesByUser(email: String): Flow<List<VehicleEntity>> = callbackFlow {
+    override fun getVehiclesByUser(email: String): Flow<List<VehicleEntity>> = callbackFlow {
         val listener = vehiclesRef.whereEqualTo("ownerEmail", email)
             .addSnapshotListener { snapshot, _ ->
                 val list = snapshot?.toObjects(VehicleEntity::class.java) ?: emptyList()
@@ -49,14 +49,14 @@ class FirebaseRepository {
         awaitClose { listener.remove() }
     }
 
-    suspend fun deleteVehicle(vehicle: VehicleEntity) {
+    override suspend fun deleteVehicle(vehicle: VehicleEntity) {
         val snapshot = vehiclesRef.whereEqualTo("id", vehicle.id).get().await()
         for (doc in snapshot.documents) {
             doc.reference.delete().await()
         }
     }
 
-    suspend fun updateVehiclesOwnerEmail(oldEmail: String, newEmail: String) {
+    override suspend fun updateVehiclesOwnerEmail(oldEmail: String, newEmail: String) {
         val snapshot = vehiclesRef.whereEqualTo("ownerEmail", oldEmail).get().await()
         db.runBatch { batch ->
             for (doc in snapshot.documents) {
@@ -65,13 +65,13 @@ class FirebaseRepository {
         }.await()
     }
 
-    suspend fun insertReservation(reservation: ReservationEntity) {
+    override suspend fun insertReservation(reservation: ReservationEntity) {
         val docRef = if (reservation.id == 0) reservationsRef.document() else reservationsRef.document(reservation.id.toString())
         val finalReservation = reservation.copy(id = docRef.id.hashCode())
         docRef.set(finalReservation).await()
     }
 
-    fun getReservationsByUser(email: String, minDateMillis: Long): Flow<List<ReservationEntity>> =
+    override fun getReservationsByUser(email: String, minDateMillis: Long): Flow<List<ReservationEntity>> =
         callbackFlow {
             val listener = reservationsRef
                 .whereEqualTo("userEmail", email)
@@ -84,19 +84,7 @@ class FirebaseRepository {
             awaitClose { listener.remove() }
         }
 
-    fun getReservationsBySpotAndDate(spotIndex: Int, dateMillis: Long): Flow<List<ReservationEntity>> =
-        callbackFlow {
-            val listener = reservationsRef
-                .whereEqualTo("spotIndex", spotIndex)
-                .whereEqualTo("dateMillis", dateMillis)
-                .addSnapshotListener { snapshot, _ ->
-                    val list = snapshot?.toObjects(ReservationEntity::class.java) ?: emptyList()
-                    this.trySendBlocking(list)
-                }
-            awaitClose { listener.remove() }
-        }
-
-    fun getAllReservationsByDate(date: Long): Flow<List<ReservationEntity>> = callbackFlow {
+    override fun getAllReservationsByDate(date: Long): Flow<List<ReservationEntity>> = callbackFlow {
         val listener = reservationsRef
             .whereEqualTo("dateMillis", date)
             .addSnapshotListener { snapshot, _ ->
@@ -106,7 +94,7 @@ class FirebaseRepository {
         awaitClose { listener.remove() }
     }
 
-    fun getFutureReservationsBySpot(spotIndex: Int, minDateMillis: Long): Flow<List<ReservationEntity>> =
+    override fun getFutureReservationsBySpot(spotIndex: Int, minDateMillis: Long): Flow<List<ReservationEntity>> =
         callbackFlow {
             val listener = reservationsRef
                 .whereEqualTo("spotIndex", spotIndex)
@@ -120,7 +108,7 @@ class FirebaseRepository {
             awaitClose { listener.remove() }
         }
 
-    fun getOtherReservationsForSpot(spotIndex: Int, dateMillis: Long, excludeId: Int): Flow<List<ReservationEntity>> =
+    override fun getOtherReservationsForSpot(spotIndex: Int, dateMillis: Long, excludeId: Int): Flow<List<ReservationEntity>> =
         callbackFlow {
             val listener = reservationsRef
                 .whereEqualTo("spotIndex", spotIndex)
@@ -133,27 +121,27 @@ class FirebaseRepository {
             awaitClose { listener.remove() }
         }
 
-    suspend fun deleteReservation(reservation: ReservationEntity) {
+    override suspend fun deleteReservation(reservation: ReservationEntity) {
         val snapshot = reservationsRef.whereEqualTo("id", reservation.id).get().await()
         for (doc in snapshot.documents) {
             doc.reference.delete().await()
         }
     }
 
-    suspend fun updateReservation(reservation: ReservationEntity) {
+    override suspend fun updateReservation(reservation: ReservationEntity) {
         val snapshot = reservationsRef.whereEqualTo("id", reservation.id).get().await()
         for (doc in snapshot.documents) {
             doc.reference.set(reservation).await()
         }
     }
 
-    suspend fun insertNotification(notification: NotificationEntity) {
+    override suspend fun insertNotification(notification: NotificationEntity) {
         val docRef = notificationsRef.document()
         val finalNotification = notification.copy(id = docRef.id.hashCode())
         docRef.set(finalNotification).await()
     }
 
-    fun getNotificationsByUser(email: String): Flow<List<NotificationEntity>> = callbackFlow {
+    override fun getNotificationsByUser(email: String): Flow<List<NotificationEntity>> = callbackFlow {
         val listener = notificationsRef
             .whereEqualTo("userEmail", email)
             .orderBy("timestamp", Query.Direction.DESCENDING)
@@ -164,7 +152,7 @@ class FirebaseRepository {
         awaitClose { listener.remove() }
     }
 
-    suspend fun markAllAsRead(email: String) {
+    override suspend fun markAllAsRead(email: String) {
         val snapshot = notificationsRef
             .whereEqualTo("userEmail", email)
             .whereEqualTo("isRead", false)
@@ -177,7 +165,7 @@ class FirebaseRepository {
         }.await()
     }
 
-    fun getUnreadCount(email: String): Flow<Int> = callbackFlow {
+    override fun getUnreadCount(email: String): Flow<Int> = callbackFlow {
         val listener = notificationsRef
             .whereEqualTo("userEmail", email)
             .whereEqualTo("isRead", false)

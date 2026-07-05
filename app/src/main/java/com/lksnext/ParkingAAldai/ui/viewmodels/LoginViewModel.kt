@@ -2,11 +2,11 @@ package com.lksnext.ParkingAAldai.ui.viewmodels
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
-import com.lksnext.ParkingAAldai.auth.AuthManager
+import com.lksnext.ParkingAAldai.auth.AuthDataSource
 import com.lksnext.ParkingAAldai.validation.AuthValidator
 
 class LoginViewModel (
-    private val authManager: AuthManager
+    private val authManager: AuthDataSource
 ) : ViewModel() {
     var email = mutableStateOf("")
     var password = mutableStateOf("")

@@ -17,7 +17,7 @@ class BookingValidatorTest {
         type = SpotType.COMBUSTION.name
     )
 
-    private val motorcyleVehicle = VehicleEntity(
+    private val motorcycleVehicle = VehicleEntity(
         ownerEmail = "user@lks.com",
         plate = "9999MOTO",
         brand = "Yamaha",
@@ -88,7 +88,7 @@ class BookingValidatorTest {
     fun motorcycleVehicle_isCompatibleWithMotorcycleSpot() {
         assertTrue(
             BookingValidator.isVehicleCompatible(
-                vehicle = motorcyleVehicle,
+                vehicle = motorcycleVehicle,
                 spotType = SpotType.MOTORCYCLE
             )
         )

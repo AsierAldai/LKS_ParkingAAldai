@@ -5,7 +5,7 @@ import android.content.SharedPreferences
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 
-class AuthManager(context: Context) {
+class AuthManager(context: Context) : AuthDataSource {
     private val prefs: SharedPreferences = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
@@ -13,7 +13,7 @@ class AuthManager(context: Context) {
         private const val KEY_LOGGED_IN_USER = "current_user_email"
     }
 
-    fun registerWithFirebase(email: String, pass: String, onResult: (Boolean, String?) -> Unit) {
+    override fun registerWithFirebase(email: String, pass: String, onResult: (Boolean, String?) -> Unit) {
         auth.createUserWithEmailAndPassword(email, pass)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
@@ -25,7 +25,7 @@ class AuthManager(context: Context) {
             }
     }
 
-    fun loginWithFirebase(email: String, pass: String, onResult: (Boolean, String?) -> Unit) {
+    override fun loginWithFirebase(email: String, pass: String, onResult: (Boolean, String?) -> Unit) {
         auth.signInWithEmailAndPassword(email, pass)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
@@ -37,16 +37,16 @@ class AuthManager(context: Context) {
             }
     }
 
-    fun logoutWithFirebase(){
+    override fun logoutWithFirebase(){
         auth.signOut()
         prefs.edit().remove(KEY_LOGGED_IN_USER).apply()
     }
 
-    fun getUserEmailWithFirebase() : String?{
+    override fun getUserEmailWithFirebase() : String?{
         return auth.currentUser?.email ?: prefs.getString(KEY_LOGGED_IN_USER, null)
     }
 
-    fun updateSessionWithFirebase(newEmail: String, currentPassword: String, onResult: (Boolean, String?) -> Unit) {
+    override fun updateSessionWithFirebase(newEmail: String, currentPassword: String, onResult: (Boolean, String?) -> Unit) {
         val user = auth.currentUser
         val email = user?.email
 

@@ -2,17 +2,17 @@ package com.lksnext.ParkingAAldai.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lksnext.ParkingAAldai.auth.AuthManager
+import com.lksnext.ParkingAAldai.auth.AuthDataSource
 import com.lksnext.ParkingAAldai.data.models.NotificationEntity
-import com.lksnext.ParkingAAldai.data.repository.FirebaseRepository
+import com.lksnext.ParkingAAldai.data.repository.ParkingRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class NotificationsViewModel(
-    private val repo: FirebaseRepository,
-    private val authManager: AuthManager
+    private val repo: ParkingRepository,
+    private val authManager: AuthDataSource
 ) : ViewModel() {
 
     private fun getCurrentEmail() = authManager.getUserEmailWithFirebase() ?: ""

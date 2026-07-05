@@ -53,4 +53,17 @@ class ForgotPasswordTest {
         )
         assertFalse(viewModel.isLoading.value)
     }
+
+    @Test
+    fun resetPasswordByEmailWithoutEmail_setsError() {
+        val viewModel = ForgotPasswordViewModel()
+
+        viewModel.selectedMethod.value = "email"
+        viewModel.emailValue.value = ""
+
+        viewModel.resetPassword()
+
+        assertEquals("Ingresa tu correo electrónico", viewModel.errorMessage.value)
+        assertEquals("", viewModel.successMessage.value)
+    }
 }

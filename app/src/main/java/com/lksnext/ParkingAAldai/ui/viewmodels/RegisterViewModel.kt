@@ -3,15 +3,15 @@ package com.lksnext.ParkingAAldai.ui.viewmodels
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lksnext.ParkingAAldai.auth.AuthDataSource
 import kotlinx.coroutines.launch
-import com.lksnext.ParkingAAldai.auth.AuthManager
 import com.lksnext.ParkingAAldai.data.models.UserEntity
-import com.lksnext.ParkingAAldai.data.repository.FirebaseRepository
+import com.lksnext.ParkingAAldai.data.repository.ParkingRepository
 import com.lksnext.ParkingAAldai.validation.AuthValidator
 
 class RegisterViewModel (
-    private val authManager: AuthManager,
-    private val repo: FirebaseRepository
+    private val authManager: AuthDataSource,
+    private val repo: ParkingRepository
 ) : ViewModel() {
     var name = mutableStateOf("")
     var username = mutableStateOf("")
