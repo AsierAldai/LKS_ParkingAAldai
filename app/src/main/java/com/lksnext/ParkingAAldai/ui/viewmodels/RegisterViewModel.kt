@@ -7,6 +7,7 @@ import kotlinx.coroutines.launch
 import com.lksnext.ParkingAAldai.auth.AuthManager
 import com.lksnext.ParkingAAldai.data.models.UserEntity
 import com.lksnext.ParkingAAldai.data.repository.FirebaseRepository
+import com.lksnext.ParkingAAldai.validation.AuthValidator
 
 class RegisterViewModel (
     private val authManager: AuthManager,
@@ -24,25 +25,14 @@ class RegisterViewModel (
     fun register(onSuccess: () -> Unit) {
         errorMessage.value = ""
 
-        if (name.value.isBlank()) {
-            errorMessage.value  = "El nombre no puede estar vacío"
-            return
-        }
-
-        if (username.value.isBlank()) {
-            errorMessage.value  = "El nombre de usuario no puede estar vacío"
-            return
-        }
-        if (!email.value.endsWith("@lks.com")) {
-            errorMessage.value  = "Usa tu correo corporativo @lks.com"
-            return
-        }
-        if(password.value.length < 6) {
-            errorMessage.value = "La contraseña debe tener al menos 6 caracteres"
-            return
-        }
-        if (password.value != confirmPassword.value) {
-            errorMessage.value = "Las contraseñas no coinciden"
+        AuthValidator.validateRegister(
+            name = name.value,
+            username = username.value,
+            email = email.value,
+            password = password.value,
+            confirmPassword = confirmPassword.value
+        )?.let {
+            errorMessage.value = it
             return
         }
 

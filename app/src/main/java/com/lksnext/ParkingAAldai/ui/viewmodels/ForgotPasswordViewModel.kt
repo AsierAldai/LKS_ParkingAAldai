@@ -2,6 +2,7 @@ package com.lksnext.ParkingAAldai.ui.viewmodels
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import com.lksnext.ParkingAAldai.validation.AuthValidator
 
 class ForgotPasswordViewModel : ViewModel() {
 
@@ -16,16 +17,13 @@ class ForgotPasswordViewModel : ViewModel() {
         errorMessage.value = ""
         successMessage.value = ""
 
-        if (selectedMethod.value == "email") {
-            if (emailValue.value.isBlank()) {
-                errorMessage.value = "Ingresa tu correo electrónico"
-                return
-            }
-        } else {
-            if (phoneValue.value.isBlank()) {
-                errorMessage.value = "Ingresa tu número de teléfono"
-                return
-            }
+        AuthValidator.validatePassswordRecovery(
+            selectedMethod = selectedMethod.value,
+            email = emailValue.value,
+            phone = phoneValue.value
+        )?.let {
+            errorMessage.value = it
+            return
         }
 
         isLoading.value = true

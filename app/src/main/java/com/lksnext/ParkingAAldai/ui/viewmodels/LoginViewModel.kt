@@ -3,6 +3,7 @@ package com.lksnext.ParkingAAldai.ui.viewmodels
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.lksnext.ParkingAAldai.auth.AuthManager
+import com.lksnext.ParkingAAldai.validation.AuthValidator
 
 class LoginViewModel (
     private val authManager: AuthManager
@@ -17,8 +18,8 @@ class LoginViewModel (
 
         errorMessage.value = ""
 
-        if (!emailTrimmed.endsWith("@lks.com")) {
-            errorMessage.value = "Usa tu correo corporativo @lks.com"
+        AuthValidator.validateLogin(emailTrimmed)?.let {
+            errorMessage.value = it
             return
         }
 

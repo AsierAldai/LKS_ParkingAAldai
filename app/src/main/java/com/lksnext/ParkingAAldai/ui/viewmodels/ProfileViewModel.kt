@@ -40,6 +40,16 @@ class ProfileViewModel(
 
     fun loadUserData() {
         val currentEmail = getCurrentEmail()
+
+        if (currentEmail.isBlank()) {
+            email.value = ""
+            name.value = "Usuario"
+            username.value = ""
+            phone.value = ""
+            _refreshTrigger.value = System.currentTimeMillis()
+            return
+        }
+
         email.value = currentEmail
         _refreshTrigger.value = System.currentTimeMillis()
 

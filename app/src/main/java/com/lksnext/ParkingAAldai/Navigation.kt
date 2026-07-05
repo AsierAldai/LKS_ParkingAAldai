@@ -51,70 +51,15 @@ fun AppNavigation(navController: NavHostController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Definimos qué pantallas NO deben mostrar la barra inferior (Login, etc.)
     val showBars = currentRoute in listOf("booking", "my_bookings", "profile")
 
     val repo = remember { FirebaseRepository() }
 
-    val loginViewModel: LoginViewModel = viewModel(
-        factory = object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return LoginViewModel(authManager) as T
-            }
-        }
-    )
-
-    val registerViewModel: RegisterViewModel = viewModel(
-        factory = object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return RegisterViewModel(authManager, repo) as T
-            }
-        }
-    )
-
-    val forgotPasswordViewModel: ForgotPasswordViewModel = viewModel(
-        factory = object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return ForgotPasswordViewModel() as T
-            }
-        }
-    )
-
-    val notificationsViewModel: NotificationsViewModel = viewModel(
-        factory = object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return NotificationsViewModel(repo, authManager) as T
-            }
-        }
-    )
-
-    val myBookingViewModel: MyBookingsViewModel = viewModel(
-        factory = object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return MyBookingsViewModel(repo, authManager) as T
-            }
-        }
-    )
-
-    val bookingViewModel: BookingViewModel = viewModel(
-        factory = object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return BookingViewModel(repo, authManager) as T
-            }
-        }
-    )
-
-// Usa esto en lugar del remember
-    val profileViewModel: ProfileViewModel = viewModel(
-        factory = object : ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                return ProfileViewModel(repo, authManager) as T
-            }
-        }
-    )
     Scaffold(
-        modifier = Modifier.windowInsetsPadding(WindowInsets.systemBars),
+        modifier = Modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.systemBars),
+        containerColor = Color.White,
         topBar = {
             if (showBars) {
                 CenterAlignedTopAppBar(
@@ -131,8 +76,8 @@ fun AppNavigation(navController: NavHostController) {
                         )
                     },
                     actions = {
-                        val unreadCount by repo.getUnreadCount(profileViewModel.email.value).collectAsState(initial = 0)
-
+                        val currentEmail = authManager.getUserEmailWithFirebase().orEmpty()
+                        val unreadCount by repo.getUnreadCount(currentEmail).collectAsState(initial = 0)
                         IconButton(
                             onClick = { navController.navigate("notifications") },
                             modifier = Modifier
@@ -187,9 +132,16 @@ fun AppNavigation(navController: NavHostController) {
         NavHost(
             navController = navController,
             startDestination = "login",
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
         ) {
+
             composable("login") {
+                val loginViewModel: LoginViewModel = viewModel(
+                    factory = appViewModelFactory { LoginViewModel(authManager) }
+                )
+
                 LoginScreen(
                     onNavigateToRegister = { navController.navigate("register") },
                     onNavigateToForgotPassword = { navController.navigate("forgot_password") },
@@ -201,7 +153,13 @@ fun AppNavigation(navController: NavHostController) {
                     viewModel = loginViewModel
                 )
             }
+
+
             composable("register") {
+                val registerViewModel: RegisterViewModel = viewModel(
+                    factory = appViewModelFactory { RegisterViewModel(authManager, repo) }
+                )
+
                 RegisterScreen(
                     onBackToLogin = { navController.popBackStack() },
                     viewModel = registerViewModel
@@ -209,26 +167,51 @@ fun AppNavigation(navController: NavHostController) {
             }
 
             composable("forgot_password") {
+                val forgotPasswordViewModel: ForgotPasswordViewModel = viewModel()
+
                 ForgotPasswordScreen(
                     onBack = { navController.popBackStack() },
                     viewModel = forgotPasswordViewModel
                 )
             }
             composable("booking") {
-                BookingScreen(onNavigate = { navController.navigate(it) }, bookingViewModel, profileViewModel)
+                val bookingViewModel: BookingViewModel = viewModel(
+                    factory = appViewModelFactory { BookingViewModel(repo, authManager) }
+                )
+                val profileViewModel: ProfileViewModel = viewModel(
+                    factory = appViewModelFactory { ProfileViewModel(repo, authManager) }
+                )
+
+                BookingScreen(
+                    onNavigate = { navController.navigate(it) },
+                    viewModel = bookingViewModel,
+                    profileViewModel = profileViewModel
+                )
             }
             composable("my_bookings") {
+                val myBookingViewModel: MyBookingsViewModel = viewModel(
+                    factory = appViewModelFactory { MyBookingsViewModel(repo, authManager) }
+                )
+
                 MyBookingsScreen(
                     viewModel = myBookingViewModel
                 )
             }
             composable("profile") {
+                val profileViewModel: ProfileViewModel = viewModel(
+                    factory = appViewModelFactory { ProfileViewModel(repo, authManager) }
+                )
+
                 ProfileScreen(
                     onNavigate = { navController.navigate(it) },
                     viewModel = profileViewModel
                 )
             }
             composable("notifications") {
+                val notificationsViewModel: NotificationsViewModel = viewModel(
+                    factory = appViewModelFactory { NotificationsViewModel(repo, authManager) }
+                )
+
                 NotificationsScreen(
                     onBack = { navController.popBackStack() },
                     viewModel = notificationsViewModel
@@ -242,11 +225,11 @@ fun AppNavigation(navController: NavHostController) {
 fun BottomNavigationBar(currentRoute: String?, onNavigate: (String) -> Unit) {
     NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
         val navItemColors = NavigationBarItemDefaults.colors(
-            selectedIconColor = OrangePrimary,       // Color del icono cuando está seleccionado
-            selectedTextColor = OrangePrimary,       // Color del texto cuando está seleccionado
-            indicatorColor = OrangePrimary.copy(alpha = 0.1f), // Color del "highlight" (fondo redondeado)
-            unselectedIconColor = Color.Gray,        // Color del icono no seleccionado
-            unselectedTextColor = Color.Gray         // Color del texto no seleccionado
+            selectedIconColor = OrangePrimary,
+            selectedTextColor = OrangePrimary,
+            indicatorColor = OrangePrimary.copy(alpha = 0.1f),
+            unselectedIconColor = Color.Gray,
+            unselectedTextColor = Color.Gray
         )
 
         NavigationBarItem(
@@ -270,5 +253,16 @@ fun BottomNavigationBar(currentRoute: String?, onNavigate: (String) -> Unit) {
             label = { Text("Perfil") },
             colors = navItemColors
         )
+    }
+}
+
+private fun <T : ViewModel> appViewModelFactory(
+    create: () -> T
+): ViewModelProvider.Factory {
+    return object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return create() as T
+        }
     }
 }
