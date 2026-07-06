@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -23,6 +24,22 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 import androidx.lifecycle.ViewModelProvider
+import com.lksnext.ParkingAAldai.auth.AuthManager
+import com.lksnext.ParkingAAldai.data.repository.FirebaseRepository
+import com.lksnext.ParkingAAldai.ui.screens.BookingScreen
+import com.lksnext.ParkingAAldai.ui.screens.ForgotPasswordScreen
+import com.lksnext.ParkingAAldai.ui.screens.LoginScreen
+import com.lksnext.ParkingAAldai.ui.screens.MyBookingsScreen
+import com.lksnext.ParkingAAldai.ui.screens.NotificationsScreen
+import com.lksnext.ParkingAAldai.ui.screens.ProfileScreen
+import com.lksnext.ParkingAAldai.ui.screens.RegisterScreen
+import com.lksnext.ParkingAAldai.ui.viewmodels.BookingViewModel
+import com.lksnext.ParkingAAldai.ui.viewmodels.ForgotPasswordViewModel
+import com.lksnext.ParkingAAldai.ui.viewmodels.LoginViewModel
+import com.lksnext.ParkingAAldai.ui.viewmodels.MyBookingsViewModel
+import com.lksnext.ParkingAAldai.ui.viewmodels.NotificationsViewModel
+import com.lksnext.ParkingAAldai.ui.viewmodels.ProfileViewModel
+import com.lksnext.ParkingAAldai.ui.viewmodels.RegisterViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,23 +51,15 @@ fun AppNavigation(navController: NavHostController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Definimos qué pantallas NO deben mostrar la barra inferior (Login, etc.)
     val showBars = currentRoute in listOf("booking", "my_bookings", "profile")
 
-    val database = remember { AppDatabase.getDatabase(context)}
-    val dao = database.appDao()
+    val repo = remember { FirebaseRepository() }
 
-// Usa esto en lugar del remember
-    val profileViewModel: ProfileViewModel = viewModel(
-        factory = object : ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                return ProfileViewModel(dao, authManager) as T
-            }
-        }
-    )
     Scaffold(
-        modifier = Modifier.windowInsetsPadding(WindowInsets.systemBars),
+        modifier = Modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.systemBars),
+        containerColor = Color.White,
         topBar = {
             if (showBars) {
                 CenterAlignedTopAppBar(
@@ -67,8 +76,8 @@ fun AppNavigation(navController: NavHostController) {
                         )
                     },
                     actions = {
-                        val unreadCount by dao.getUnreadCount(profileViewModel.email.value).collectAsState(initial = 0)
-
+                        val currentEmail = authManager.getUserEmailWithFirebase().orEmpty()
+                        val unreadCount by repo.getUnreadCount(currentEmail).collectAsState(initial = 0)
                         IconButton(
                             onClick = { navController.navigate("notifications") },
                             modifier = Modifier
@@ -123,9 +132,16 @@ fun AppNavigation(navController: NavHostController) {
         NavHost(
             navController = navController,
             startDestination = "login",
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
         ) {
+
             composable("login") {
+                val loginViewModel: LoginViewModel = viewModel(
+                    factory = appViewModelFactory { LoginViewModel(authManager) }
+                )
+
                 LoginScreen(
                     onNavigateToRegister = { navController.navigate("register") },
                     onNavigateToForgotPassword = { navController.navigate("forgot_password") },
@@ -134,37 +150,72 @@ fun AppNavigation(navController: NavHostController) {
                             popUpTo("login") { inclusive = true }
                         }
                     },
-                    authManager = authManager
+                    viewModel = loginViewModel
                 )
             }
+
+
             composable("register") {
+                val registerViewModel: RegisterViewModel = viewModel(
+                    factory = appViewModelFactory { RegisterViewModel(authManager, repo) }
+                )
+
                 RegisterScreen(
                     onBackToLogin = { navController.popBackStack() },
-                    authManager = authManager,
-                    dao = dao
+                    viewModel = registerViewModel
                 )
             }
 
             composable("forgot_password") {
-                ForgotPasswordScreen(onBack = { navController.popBackStack() })
+                val forgotPasswordViewModel: ForgotPasswordViewModel = viewModel()
+
+                ForgotPasswordScreen(
+                    onBack = { navController.popBackStack() },
+                    viewModel = forgotPasswordViewModel
+                )
             }
             composable("booking") {
-                BookingScreen(onNavigate = { navController.navigate(it) }, dao, profileViewModel)
+                val bookingViewModel: BookingViewModel = viewModel(
+                    factory = appViewModelFactory { BookingViewModel(repo, authManager) }
+                )
+                val profileViewModel: ProfileViewModel = viewModel(
+                    factory = appViewModelFactory { ProfileViewModel(repo, authManager) }
+                )
+
+                BookingScreen(
+                    onNavigate = { navController.navigate(it) },
+                    viewModel = bookingViewModel,
+                    profileViewModel = profileViewModel
+                )
             }
             composable("my_bookings") {
-                MyBookingsScreen(dao, profileViewModel)
+                val myBookingViewModel: MyBookingsViewModel = viewModel(
+                    factory = appViewModelFactory { MyBookingsViewModel(repo, authManager) }
+                )
+
+                MyBookingsScreen(
+                    viewModel = myBookingViewModel
+                )
             }
             composable("profile") {
+                val profileViewModel: ProfileViewModel = viewModel(
+                    factory = appViewModelFactory { ProfileViewModel(repo, authManager) }
+                )
+
                 ProfileScreen(
                     onNavigate = { navController.navigate(it) },
                     viewModel = profileViewModel
                 )
             }
             composable("notifications") {
+                val notificationsViewModel: NotificationsViewModel = viewModel(
+                    factory = appViewModelFactory { NotificationsViewModel(repo, authManager) }
+                )
+
                 NotificationsScreen(
-                    dao,
-                    profileViewModel,
-                    onBack = { navController.popBackStack() })
+                    onBack = { navController.popBackStack() },
+                    viewModel = notificationsViewModel
+                )
             }
         }
     }
@@ -173,23 +224,45 @@ fun AppNavigation(navController: NavHostController) {
 @Composable
 fun BottomNavigationBar(currentRoute: String?, onNavigate: (String) -> Unit) {
     NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
+        val navItemColors = NavigationBarItemDefaults.colors(
+            selectedIconColor = OrangePrimary,
+            selectedTextColor = OrangePrimary,
+            indicatorColor = OrangePrimary.copy(alpha = 0.1f),
+            unselectedIconColor = Color.Gray,
+            unselectedTextColor = Color.Gray
+        )
+
         NavigationBarItem(
             selected = currentRoute == "booking",
             onClick = { onNavigate("booking") },
             icon = { Icon(Icons.Default.Add, null) },
-            label = { Text("Reserva") }
+            label = { Text("Reserva") },
+            colors = navItemColors
         )
         NavigationBarItem(
             selected = currentRoute == "my_bookings",
             onClick = { onNavigate("my_bookings") },
             icon = { Icon(Icons.Default.CalendarMonth, null) },
-            label = { Text("Mis Reservas") }
+            label = { Text("Mis Reservas") },
+            colors = navItemColors
         )
         NavigationBarItem(
             selected = currentRoute == "profile",
             onClick = { onNavigate("profile") },
             icon = { Icon(Icons.Default.PersonOutline, null) },
-            label = { Text("Perfil") }
+            label = { Text("Perfil") },
+            colors = navItemColors
         )
+    }
+}
+
+private fun <T : ViewModel> appViewModelFactory(
+    create: () -> T
+): ViewModelProvider.Factory {
+    return object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return create() as T
+        }
     }
 }

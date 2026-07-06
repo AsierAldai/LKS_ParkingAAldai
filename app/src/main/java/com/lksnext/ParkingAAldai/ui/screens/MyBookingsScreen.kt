@@ -1,13 +1,17 @@
-package com.lksnext.ParkingAAldai
+package com.lksnext.ParkingAAldai.ui.screens
 
+import com.lksnext.ParkingAAldai.ui.components.TimePickerDialog
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -19,33 +23,52 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.lksnext.ParkingAAldai.data.models.ReservationEntity
+import com.lksnext.ParkingAAldai.ui.components.getIconForType
+import com.lksnext.ParkingAAldai.ui.components.getSpotPrefix
 import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 import com.lksnext.ParkingAAldai.ui.theme.TextDark
-import kotlinx.coroutines.launch
+import com.lksnext.ParkingAAldai.ui.viewmodels.MyBookingsViewModel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
 fun MyBookingsScreen(
-    dao: AppDao,
-    profileViewModel: ProfileViewModel
+    viewModel: MyBookingsViewModel
 ) {
-    val userEmail = profileViewModel.email.value
-    val monthAgoMillis = remember {System.currentTimeMillis() - (30L * 24 * 60 * 60 * 1000L) }
-    val reservations by dao.getReservationsByUser(userEmail, monthAgoMillis).collectAsState(initial = emptyList())
-    val scope = rememberCoroutineScope()
+    val reservations by viewModel.bookings.collectAsState(initial = emptyList())
+
+    MyBookingsScreenContent(
+        reservations = reservations,
+        getOtherReservationsForSpot = viewModel::getOtherReservationsForSpot,
+        onCancelBooking = viewModel::cancelBooking,
+        onEditBooking = viewModel::editBooking
+    )
+}
+
+@Composable
+private fun MyBookingsScreenContent(
+    reservations: List<ReservationEntity>,
+    getOtherReservationsForSpot: (Int, Long, Int) -> Flow<List<ReservationEntity>>,
+    onCancelBooking: (ReservationEntity) -> Unit,
+    onEditBooking: (ReservationEntity, String, String, String) -> Unit
+) {
 
     var selectedReservation by remember { mutableStateOf<ReservationEntity?>(null) }
     var showDetails by remember { mutableStateOf(false) }
-
     var showEditDialog by remember { mutableStateOf(false) }
 
     val otherReservations by if (selectedReservation != null) {
-        dao.getOtherReservationsForSpot(
+        getOtherReservationsForSpot(
             selectedReservation!!.spotIndex,
             selectedReservation!!.dateMillis,
             selectedReservation!!.id
@@ -95,11 +118,9 @@ fun MyBookingsScreen(
             reservation = selectedReservation!!,
             onDismiss = { showDetails = false },
             onDelete = {
-                scope.launch {
-                    dao.deleteReservation(selectedReservation!!)
-                    showDetails = false
-                    selectedReservation = null
-                }
+               onCancelBooking(selectedReservation!!)
+                showDetails = false
+                selectedReservation = null
             },
             onEdit = {
                 showDetails = false
@@ -114,16 +135,14 @@ fun MyBookingsScreen(
             otherReservations = otherReservations,
             onDismiss = { showEditDialog = false },
             onSave = { newName, newStart, newEnd ->
-                scope.launch {
-                    val updated = selectedReservation!!.copy(
-                        reservationName = newName,
-                        startTime = newStart,
-                        endTime = newEnd
-                    )
-                    dao.updateReservation(updated)
-                    showEditDialog = false
-                    selectedReservation = null
-                }
+                onEditBooking(
+                    selectedReservation!!,
+                    newName,
+                    newStart,
+                    newEnd
+                )
+                showEditDialog = false
+                selectedReservation = null
             }
         )
     }
@@ -297,6 +316,8 @@ fun EditReservationDialog(
     var showStartPicker by remember { mutableStateOf(false) }
     var showEndPicker by remember { mutableStateOf(false) }
 
+    val focusManager = LocalFocusManager.current
+
     // Lógica de validación de horas
     val validationError = remember(startTime, endTime, otherReservations) {
         try {
@@ -333,59 +354,95 @@ fun EditReservationDialog(
 
     val canSave = validationError == null && name.isNotBlank()
 
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            modifier = Modifier.fillMaxWidth()
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { focusManager.clearFocus() }
+                .imePadding(),
+            contentAlignment = Alignment.Center
         ) {
-            Column(Modifier.padding(20.dp)) {
-                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-                    Text("Detalles de Reserva", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, null) }
-                }
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource()},
+                        indication = null
+                    ) { focusManager.clearFocus()}
+            ) {
+                Column(
+                    Modifier
+                        .padding(20.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                        Text("Detalles de Reserva", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, null) }
+                    }
 
-                Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(16.dp))
 
-                Text("Nombre de la reserva", fontSize = 13.sp, color = Color.Gray)
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp)
-                )
-
-                Spacer(Modifier.height(16.dp))
-
-                // Selectores de hora similares a ReservationSheet
-                TimeSelectorField("Hora de inicio", startTime) { showStartPicker = true }
-                Spacer(Modifier.height(16.dp))
-                TimeSelectorField("Hora de finalización", endTime) { showEndPicker = true }
-
-                Text(
-                    text = validationError ?: "Horario disponible y correcto",
-                    fontSize = 12.sp,
-                    color = if (validationError == null) Color.Gray else Color.Red,
-                    modifier = Modifier.padding(top = 4.dp),
-                    fontWeight = if (validationError != null) FontWeight.Bold else FontWeight.Normal
-                )
-
-                Spacer(Modifier.height(24.dp))
-
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f),
+                    Text("Nombre de la reserva", fontSize = 13.sp, color = Color.Gray)
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(8.dp)
-                    ) { Text("Cancelar") }
+                    )
 
-                    Button(
-                        onClick = { onSave(name, startTime, endTime) },
-                        enabled = canSave,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
-                    ) { Text("Guardar", color = Color.White) }
+                    Spacer(Modifier.height(16.dp))
+
+                    // Selectores de hora similares a ReservationSheet
+                    TimeSelectorField("Hora de inicio", startTime) {
+                        focusManager.clearFocus()
+                        showStartPicker = true
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    TimeSelectorField("Hora de finalización", endTime) {
+                        focusManager.clearFocus()
+                        showEndPicker = true
+                    }
+
+                    Text(
+                        text = validationError ?: "Horario disponible y correcto",
+                        fontSize = 12.sp,
+                        color = if (validationError == null) Color.Gray else Color.Red,
+                        modifier = Modifier.padding(top = 4.dp),
+                        fontWeight = if (validationError != null) FontWeight.Bold else FontWeight.Normal
+                    )
+
+                    Spacer(Modifier.height(24.dp))
+
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) { Text("Cancelar") }
+
+                        Button(
+                            onClick = { onSave(name, startTime, endTime) },
+                            enabled = canSave,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
+                        ) { Text("Guardar", color = Color.White) }
+                    }
                 }
             }
         }
@@ -423,4 +480,15 @@ fun TimeSelectorField(label: String, time: String, onClick: () -> Unit) {
             }
         }
     }
+}
+
+@Preview
+@Composable
+fun MyBookingsViewModelPreview() {
+    MyBookingsScreenContent(
+        reservations = emptyList(),
+        getOtherReservationsForSpot = { _, _, _ -> flowOf(emptyList()) },
+        onCancelBooking = {},
+        onEditBooking = { _, _, _, _ -> }
+    )
 }

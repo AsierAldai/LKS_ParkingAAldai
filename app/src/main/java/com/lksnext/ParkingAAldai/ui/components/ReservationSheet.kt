@@ -1,4 +1,4 @@
-package com.lksnext.ParkingAAldai
+package com.lksnext.ParkingAAldai.ui.components
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -23,6 +23,11 @@ import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 import java.text.SimpleDateFormat
 import java.util.*
 import androidx.compose.ui.platform.LocalLocale
+import androidx.compose.ui.platform.testTag
+import com.lksnext.ParkingAAldai.validation.BookingValidator
+import com.lksnext.ParkingAAldai.data.models.ReservationEntity
+import com.lksnext.ParkingAAldai.data.models.VehicleEntity
+import com.lksnext.ParkingAAldai.ui.screens.SpotType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,29 +48,11 @@ fun ReservationSheet(
     var showEndPicker by remember { mutableStateOf(false) }
 
     val isTimeValid = remember(startTime, endTime) {
-        try {
-            val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
-            val start = sdf.parse(startTime)!!
-            val end = sdf.parse(endTime)!!
-            val limitStart = sdf.parse("08:00")!!
-            val limitEnd = sdf.parse("19:00")!!
-
-            val diffHours = (end.time - start.time) / (1000.0 * 60 * 60)
-
-            val withinRange = !start.before(limitStart) && !end.after(limitEnd)
-            val durationOk = diffHours in 0.1..9.0
-
-            withinRange && durationOk
-        } catch (e: Exception) { false }
+        BookingValidator.isTimeRangeValid(startTime, endTime)
     }
 
-    val compatibleVehicles = userVehicles.filter {
-        when (spotType) {
-            SpotType.MOTORCYCLE -> it.type == SpotType.MOTORCYCLE.name
-            SpotType.DISABLED -> it.type == SpotType.DISABLED.name
-            SpotType.COMBUSTION, SpotType.ELECTRIC ->
-                it.type == SpotType.COMBUSTION.name || it.type == SpotType.ELECTRIC.name
-        }
+    val compatibleVehicles = remember(userVehicles, spotType) {
+        BookingValidator.compatibleVehicle(userVehicles, spotType)
     }
 
     val dateFormatter = remember { SimpleDateFormat("EEEE, d 'de' MMMM 'de' yyyy", Locale.getDefault()) }
@@ -84,20 +71,21 @@ fun ReservationSheet(
     )
 
     val isSpotOccupiedByTime = remember(startTime, endTime, futureReservations) {
-        val newStart = timeToMinutes(startTime)
-        val newEnd = timeToMinutes(endTime)
-
-        // Solo comprobamos las reservas que coinciden exactamente con selectedDateMillis
-        futureReservations.filter { it.dateMillis == selectedDateMillis }.any { res ->
-            val existingStart = timeToMinutes(res.startTime)
-            val existingEnd = timeToMinutes(res.endTime)
-
-            // Lógica de solapamiento: (StartA < EndB) y (EndA > StartB)
-            newStart < existingEnd && newEnd > existingStart
-        }
+        BookingValidator.hasOverlap(
+            startTime,
+            endTime,
+            futureReservations.filter { it.dateMillis == selectedDateMillis}
+        )
     }
 
-    Column(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.9f).padding(16.dp).verticalScroll(rememberScrollState())) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(0.9f)
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
+            .testTag("reservation_sheet")
+    ) {
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("Nueva Reserva", fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -148,17 +136,22 @@ fun ReservationSheet(
 
         if (!isTimeValid) {
             Text(
-                "⚠️ Horario de 08:00 a 19:00 (Máximo 9 horas)",
+                "Horario de 08:00 a 19:00 (Máximo 9 horas)",
                 color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp)
             )
         }
 
         Text("Vehículo", fontWeight = FontWeight.Bold)
         if (compatibleVehicles.isEmpty()) {
-            Text("⚠️ No tienes vehículos compatibles. Puedes registrar un vehículo en tu perfil.", color = Color.Red, fontSize = 12.sp)
+            Text("No tienes vehículos compatibles. Puedes registrar un vehículo en tu perfil.", color = Color.Red, fontSize = 12.sp)
         } else {
             compatibleVehicles.forEach { vehicle ->
-                Row(Modifier.fillMaxWidth().clickable { selectedVehicle = vehicle }.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .testTag("vehicle_${vehicle.plate}")
+                        .clickable { selectedVehicle = vehicle }
+                        .padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(selected = (selectedVehicle == vehicle), onClick = { selectedVehicle = vehicle })
                     Text("${vehicle.brand} (${vehicle.plate})")
                 }
@@ -211,14 +204,16 @@ fun ReservationSheet(
             Button(
                 onClick = { selectedVehicle?.let { onConfirm(it, startTime, endTime) } },
                 enabled = selectedVehicle != null && isTimeValid && !isSpotOccupiedByTime,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("res_button"),
                 colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)
             ) {
                 Text("Reservar", color = Color.White)
             }
         }
         if (isSpotOccupiedByTime) {
-            Text("⚠️ Esta plaza ya está ocupada en ese horario.", color = Color.Red, fontSize = 12.sp)
+            Text("Esta plaza ya está ocupada en ese horario.", color = Color.Red, fontSize = 12.sp)
         }
         if (showStartPicker) {
             val state = rememberTimePickerState(initialHour = 8, initialMinute = 0, is24Hour = true)

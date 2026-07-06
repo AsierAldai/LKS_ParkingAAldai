@@ -1,6 +1,7 @@
-package com.lksnext.ParkingAAldai
+package com.lksnext.ParkingAAldai.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -15,6 +16,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -25,21 +28,54 @@ import androidx.compose.ui.unit.sp
 import com.lksnext.ParkingAAldai.ui.theme.BackgroundBeige
 import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 import com.lksnext.ParkingAAldai.ui.theme.TextDark
-import kotlinx.coroutines.launch
+import com.lksnext.ParkingAAldai.ui.viewmodels.RegisterViewModel
 
 @Composable
-fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager, dao: AppDao) {
-    var name by remember { mutableStateOf("") }
-    var username by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf("")}
-    val scope = rememberCoroutineScope()
-    
+fun RegisterScreen(
+    onBackToLogin: () -> Unit,
+    viewModel: RegisterViewModel
+) {
+    RegisterScreenContent(
+        name = viewModel.name.value,
+        username = viewModel.username.value,
+        email = viewModel.email.value,
+        phone = viewModel.phone.value,
+        password = viewModel.password.value,
+        confirmPassword = viewModel.confirmPassword.value,
+        errorMessage = viewModel.errorMessage.value,
+        onNameChange = { viewModel.name.value = it },
+        onUsernameChange = { viewModel.username.value = it },
+        onEmailChange = { viewModel.email.value = it },
+        onPhoneChange = { viewModel.phone.value = it },
+        onPasswordChange = { viewModel.password.value = it },
+        onConfirmPasswordChange = { viewModel.confirmPassword.value = it },
+        onRegisterClick = { viewModel.register(onBackToLogin) },
+        onBackToLogin = onBackToLogin
+    )
+}
+
+@Composable
+fun RegisterScreenContent(
+    name: String,
+    username: String,
+    email: String,
+    phone: String,
+    password: String,
+    confirmPassword: String,
+    errorMessage: String,
+    onNameChange: (String) -> Unit,
+    onUsernameChange: (String) -> Unit,
+    onEmailChange: (String) -> Unit,
+    onPhoneChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onConfirmPasswordChange: (String) -> Unit,
+    onRegisterClick: () -> Unit,
+    onBackToLogin: () -> Unit
+) {
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
+
+    val focusManager = LocalFocusManager.current
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -49,6 +85,11 @@ fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager, dao: App
             modifier = Modifier
                 .fillMaxSize()
                 .safeDrawingPadding()
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = {
+                        focusManager.clearFocus()
+                    })
+                }
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -85,7 +126,7 @@ fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager, dao: App
             RegisterTextField(
                 label = "Nombre",
                 value = name,
-                onValueChange = { name = it },
+                onValueChange = { onNameChange(it) },
                 placeholder = "Ej: Juan Pérez"
             )
 
@@ -95,7 +136,7 @@ fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager, dao: App
             RegisterTextField(
                 label = "Nombre de usuario",
                 value = username,
-                onValueChange = { username = it },
+                onValueChange = { onUsernameChange(it) },
                 placeholder = "Ej: juan_perez"
             )
 
@@ -105,8 +146,8 @@ fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager, dao: App
             RegisterTextField(
                 label = "Correo electrónico",
                 value = email,
-                onValueChange = { email = it },
-                placeholder = "correo@ejemplo.com"
+                onValueChange = { onEmailChange(it) },
+                placeholder = "correo@lks.com"
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -115,7 +156,7 @@ fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager, dao: App
             RegisterTextField(
                 label = "Teléfono (opcional)",
                 value = phone,
-                onValueChange = { phone = it },
+                onValueChange = { onPhoneChange(it) },
                 placeholder = "Ej: 1234567890"
             )
 
@@ -125,7 +166,7 @@ fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager, dao: App
             RegisterTextField(
                 label = "Contraseña",
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = { onPasswordChange(it) },
                 placeholder = "Mínimo 6 caracteres",
                 isPassword = true,
                 passwordVisible = passwordVisible,
@@ -138,7 +179,7 @@ fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager, dao: App
             RegisterTextField(
                 label = "Confirmar contraseña",
                 value = confirmPassword,
-                onValueChange = { confirmPassword = it },
+                onValueChange = { onConfirmPasswordChange(it) },
                 placeholder = "Repite tu contraseña",
                 isPassword = true,
                 passwordVisible = confirmPasswordVisible,
@@ -149,29 +190,7 @@ fun RegisterScreen(onBackToLogin: () -> Unit, authManager: AuthManager, dao: App
 
             // Register Button
             Button(
-                onClick = {
-                    if (email.isEmpty() || password.isEmpty()){
-                        errorMessage = "Completa todos los campos"
-                    } else if (password != confirmPassword){
-                        errorMessage = "Las contraseñas no coinciden"
-                    } else{
-                        val success = authManager.registerUser(email, username, password)
-                        if (success){
-                            scope.launch{
-                                val newUser = UserEntity(
-                                    email = email,
-                                    name = name,
-                                    username = username,
-                                    phone = phone
-                                )
-                                dao.insertUser(newUser)
-                                onBackToLogin()
-                            }
-                        } else{
-                            errorMessage = "El usuario ya existe"
-                        }
-                    }
-                },
+                onClick = onRegisterClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -253,7 +272,21 @@ fun RegisterTextField(
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
 @Composable
 fun RegisterScreenPreview() {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val db = AppDatabase.getDatabase(context)
-    RegisterScreen(onBackToLogin = {}, authManager = AuthManager(context), dao = db.appDao())
+    RegisterScreenContent(
+        name = "",
+        username = "",
+        email = "",
+        phone = "",
+        password = "",
+        confirmPassword = "",
+        errorMessage = "",
+        onNameChange = { },
+        onUsernameChange = { },
+        onEmailChange = { },
+        onPhoneChange = { },
+        onPasswordChange = { },
+        onConfirmPasswordChange = { },
+        onRegisterClick = { },
+        onBackToLogin = { }
+    )
 }

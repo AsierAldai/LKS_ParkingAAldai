@@ -1,4 +1,4 @@
-package com.lksnext.ParkingAAldai
+package com.lksnext.ParkingAAldai.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -10,39 +10,50 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import com.lksnext.ParkingAAldai.data.models.NotificationEntity
 import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
-import kotlinx.coroutines.launch
+import com.lksnext.ParkingAAldai.ui.viewmodels.NotificationsViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificationsScreen(dao: AppDao, profileViewModel: ProfileViewModel, onBack: () -> Unit) {
-    val userEmail = profileViewModel.email.value
-    val notifications by dao.getNotificationsByUser(userEmail).collectAsState(initial = emptyList())
-    val scope = rememberCoroutineScope()
+fun NotificationsScreen(
+    viewModel: NotificationsViewModel,
+    onBack: () -> Unit
+) {
+    val notifications by viewModel.notifications.collectAsState(initial = emptyList())
 
     // Marcar como leídas al salir
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
-        scope.launch {
-            dao.markAllAsRead(userEmail)
-        }
+        viewModel.markAllAsRead()
     }
 
+    NotificationsScreenContent(
+        notifications = notifications,
+        onBack = onBack
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NotificationsScreenContent(
+    notifications: List<NotificationEntity>,
+    onBack: () -> Unit
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -62,7 +73,10 @@ fun NotificationsScreen(dao: AppDao, profileViewModel: ProfileViewModel, onBack:
             }
         } else {
             LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding).background(Color.White)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .background(Color.White)
             ) {
                 val now = System.currentTimeMillis()
                 val oneWeekMillis = 7 * 24 * 60 * 60 * 1000L
@@ -151,4 +165,13 @@ fun SectionHeader(title: String) {
             letterSpacing = 1.sp // Un poco de espacio entre letras para estilo "subtítulo"
         )
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun NotificationsScreenPreview() {
+    NotificationsScreenContent(
+        notifications = emptyList(),
+        onBack = {}
+    )
 }

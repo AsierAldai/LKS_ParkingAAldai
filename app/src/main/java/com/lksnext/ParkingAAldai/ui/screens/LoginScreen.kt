@@ -1,6 +1,7 @@
-package com.lksnext.ParkingAAldai
+package com.lksnext.ParkingAAldai.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -15,6 +16,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -25,18 +28,42 @@ import androidx.compose.ui.unit.sp
 import com.lksnext.ParkingAAldai.ui.theme.BackgroundBeige
 import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 import com.lksnext.ParkingAAldai.ui.theme.TextDark
+import com.lksnext.ParkingAAldai.ui.viewmodels.LoginViewModel
 
 @Composable
 fun LoginScreen(
     onNavigateToRegister: () -> Unit,
     onNavigateToForgotPassword: () -> Unit,
     onLoginSuccess: () -> Unit,
-    authManager: AuthManager
+    viewModel: LoginViewModel
 ) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    LoginScreenContent(
+        email = viewModel.email.value,
+        password = viewModel.password.value,
+        errorMessage = viewModel.errorMessage.value,
+        onEmailChange = { viewModel.email.value = it },
+        onPasswordChange = { viewModel.password.value = it },
+        onLoginClick = { viewModel.login(onLoginSuccess) },
+        onNavigateToRegister = onNavigateToRegister,
+        onNavigateToForgotPassword = onNavigateToForgotPassword
+    )
+}
+
+@Composable
+private fun LoginScreenContent(
+    email: String,
+    password: String,
+    errorMessage: String,
+    onEmailChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onLoginClick: () -> Unit,
+    onNavigateToRegister: () -> Unit,
+    onNavigateToForgotPassword: () -> Unit
+) {
+
     var passwordVisible by remember { mutableStateOf(false) }
-    var errorText by remember { mutableStateOf("")}
+    val focusManager = LocalFocusManager.current
+
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -46,6 +73,11 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .safeDrawingPadding()
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = {
+                        focusManager.clearFocus()
+                    })
+                }
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -82,15 +114,15 @@ fun LoginScreen(
             // Email Field
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "Usuario o Email",
+                    text = "Correo electrónico",
                     fontWeight = FontWeight.SemiBold,
                     color = TextDark,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 OutlinedTextField(
                     value = email,
-                    onValueChange = { email = it },
-                    placeholder = { Text("Ingresa tu usuario o email") },
+                    onValueChange = onEmailChange,
+                    placeholder = { Text("ejemplo@lks.com") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -117,7 +149,7 @@ fun LoginScreen(
                 )
                 OutlinedTextField(
                     value = password,
-                    onValueChange = { password = it },
+                    onValueChange = onPasswordChange,
                     placeholder = { Text("Ingresa tu contraseña") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -140,13 +172,7 @@ fun LoginScreen(
 
             // Login Button
             Button(
-                onClick = {
-                    if (authManager.loginUser(email, password)){
-                        onLoginSuccess()
-                    } else{
-                        errorText = "Correo o contraseña incorrectos"
-                    }
-                },
+                onClick = onLoginClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -160,8 +186,11 @@ fun LoginScreen(
                     color = Color.White
                 )
             }
-            if (errorText.isNotEmpty()){
-                Text(errorText, color = Color.Red, modifier = Modifier.padding(top = 8.dp))
+            if (errorMessage.isNotEmpty()){
+                Text(
+                    text = errorMessage,
+                    color = Color.Red,
+                    modifier = Modifier.padding(top = 8.dp))
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -191,6 +220,14 @@ fun LoginScreen(
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
 @Composable
 fun LoginScreenPreview() {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    LoginScreen(onNavigateToRegister = {}, onNavigateToForgotPassword = {}, onLoginSuccess = {}, authManager = AuthManager(context))
+    LoginScreenContent(
+        email = "",
+        password = "",
+        errorMessage = "",
+        onEmailChange = {},
+        onPasswordChange = {},
+        onLoginClick = {},
+        onNavigateToRegister = {},
+        onNavigateToForgotPassword = {}
+    )
 }

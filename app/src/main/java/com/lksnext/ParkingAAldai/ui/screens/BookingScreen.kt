@@ -1,10 +1,9 @@
-package com.lksnext.ParkingAAldai
+package com.lksnext.ParkingAAldai.ui.screens
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.*
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,18 +23,32 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
+import com.lksnext.ParkingAAldai.ui.viewmodels.ProfileViewModel
+import com.lksnext.ParkingAAldai.data.models.ReservationEntity
+import com.lksnext.ParkingAAldai.data.models.VehicleEntity
+import com.lksnext.ParkingAAldai.ui.components.ReservationSheet
+import com.lksnext.ParkingAAldai.ui.components.getSpotPrefix
 import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 import com.lksnext.ParkingAAldai.ui.theme.TextDark
+import com.lksnext.ParkingAAldai.ui.viewmodels.BookingViewModel
+import com.lksnext.ParkingAAldai.workers.NotificationWorker
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.flowOf
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.TimeUnit
+import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.random.Random
 
 enum class SpotType {
@@ -61,10 +74,42 @@ fun Long.normalizeToStartOfDay(): Long {
 @Composable
 fun BookingScreen(
     onNavigate: (String) -> Unit,
-    dao: AppDao,
-    profileViewModel: ProfileViewModel
+    viewModel: BookingViewModel,
+    profileViewModel: ProfileViewModel,
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val userVehicle by profileViewModel.vehicles.collectAsState(initial = emptyList())
+
+    BookingScreenContent(
+        onNavigate = onNavigate,
+        userVehicles = userVehicle,
+        getAllReservationsByDate = viewModel::getAllReservationsByDate,
+        getFutureReservationsBySpot = viewModel::getFutureReservationsBySpot,
+        onCreateReservation = viewModel::createReservation,
+        errorMessage = viewModel.errorMessage.value,
+        isLoading = viewModel.isLoading.value
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BookingScreenContent(
+    onNavigate: (String) -> Unit,
+    userVehicles: List<VehicleEntity>,
+    getAllReservationsByDate: (Long) -> Flow<List<ReservationEntity>>,
+    getFutureReservationsBySpot: (Int, Long) -> Flow<List<ReservationEntity>>,
+    onCreateReservation: (
+            spotIndex: Int,
+            spotType: SpotType,
+            selectedDateMillis: Long,
+            vehicle: VehicleEntity,
+            start: String,
+            end: String,
+            onSuccess: () -> Unit
+    ) -> Unit,
+    errorMessage: String,
+    isLoading: Boolean
+) {
+    val context = LocalContext.current
 
     var zoomLevel by remember { mutableFloatStateOf(1.0f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
@@ -84,9 +129,9 @@ fun BookingScreen(
     val selectedDateFormatted = dateFormatter.format(Date(selectedDateMillis))
 
     // Obtenemos TODAS las reservas del día seleccionado para el mapa
-    val allReservationsToday by remember(selectedDateMillis) {
-        dao.getAllReservationsByDate(selectedDateMillis)
-        }.collectAsState(initial = emptyList())
+    val allReservationsToday by produceState<List<ReservationEntity>>(initialValue = emptyList(), selectedDateMillis) {
+        getAllReservationsByDate(selectedDateMillis).collect { value = it}
+    }
 
     // Estados de los filtros
     var filterCombustion by remember { mutableStateOf(false) }
@@ -98,13 +143,15 @@ fun BookingScreen(
 
     val scope = rememberCoroutineScope()
     var selectedSpotIndex by remember { mutableStateOf<Int?>(null) }
-    val userVehicles by profileViewModel.vehicles.collectAsState()
 
     // Obtenemos reservas futuras de la plaza (incluyendo otros días para mostrar información)
-    val futureReservations by if (selectedSpotIndex != null) {
-        dao.getFutureReservationsBySpot(selectedSpotIndex!!, selectedDateMillis).collectAsState(initial = emptyList())
-    } else {
-        remember { mutableStateOf(emptyList<ReservationEntity>()) }
+    val futureReservations by produceState<List<ReservationEntity>>(initialValue = emptyList(), selectedSpotIndex, selectedDateMillis) {
+        val index = selectedSpotIndex
+        if (index != null) {
+            getFutureReservationsBySpot(index, selectedDateMillis).collect { value = it }
+        } else {
+            value = emptyList()
+        }
     }
 
     val spots = remember {
@@ -397,30 +444,19 @@ fun BookingScreen(
                 futureReservations = futureReservations,
                 onDismiss = { selectedSpotIndex = null },
                 onConfirm = { vehicle, start, end ->
-                    scope.launch {
-                        val selectedSpot = spots[selectedSpotIndex!!]
-                        val prefix = getSpotPrefix(selectedSpot.type)
-                        val res = ReservationEntity(
-                            userEmail = vehicle.ownerEmail,
-                            spotIndex = selectedSpotIndex!!,
-                            spotType = spots[selectedSpotIndex!!].type.name,
-                            dateMillis = selectedDateMillis,
-                            startTime = start,
-                            endTime = end,
-                            vehiclePlate = vehicle.plate,
-                            reservationName = "Reserva en plaza $selectedSpotIndex"
-                        )
-                        dao.insertReservation(res)
-                        dao.insertNotification(
-                            NotificationEntity(
-                                userEmail = vehicle.ownerEmail,
-                                title = "Tu reserva en la plaza $prefix-$selectedSpotIndex ha sido confirmada",
-                                timestamp = System.currentTimeMillis(),
-                                isRead = false
-                            )
-                        )
+                    val spotIndex = selectedSpotIndex ?: return@ReservationSheet
+                    val spotType = spots[spotIndex].type
+                    val prefix = getSpotPrefix(spotType)
 
-                        val workManager = androidx.work.WorkManager.getInstance(context)
+                    onCreateReservation(
+                        spotIndex,
+                        spotType,
+                        selectedDateMillis,
+                        vehicle,
+                        start,
+                        end
+                    ) {
+                        val workManager = WorkManager.getInstance(context)
 
                         val endParts = end.split(":")
                         val calEnd = Calendar.getInstance().apply {
@@ -435,26 +471,34 @@ fun BookingScreen(
                         fun scheduleAlert(minsBefore: Int) {
                             val delay = millisUntilEnd - (minsBefore * 60 * 1000L)
                             if (delay > 0) {
-                                val data = androidx.work.workDataOf(
+                                val data = workDataOf(
                                     "email" to vehicle.ownerEmail,
-                                    "title" to "Tu reserva en la plaza $prefix-$selectedSpotIndex termina en $minsBefore minutos"
+                                    "title" to "Tu reserva en la plaza $prefix-$spotIndex termina en $minsBefore minutos"
                                 )
 
-                                val request = androidx.work.OneTimeWorkRequestBuilder<NotificationWorker>()
-                                    .setInitialDelay(delay, java.util.concurrent.TimeUnit.MILLISECONDS)
+                                val request = OneTimeWorkRequestBuilder<NotificationWorker>()
+                                    .setInitialDelay(delay, TimeUnit.MILLISECONDS)
                                     .setInputData(data)
                                     .build()
 
                                 workManager.enqueue(request)
                             }
                         }
-
                         scheduleAlert(30)
                         scheduleAlert(15)
                         selectedSpotIndex = null
                     }
                 }
             )
+        }
+
+        if (errorMessage.isNotEmpty()) {
+            Snackbar(
+                modifier = Modifier.padding(16.dp),
+                containerColor = Color.Red
+            ) {
+                Text(errorMessage, color = Color.White)
+            }
         }
     }
 }
@@ -530,14 +574,14 @@ fun FilterItemSimple(label: String, checked: Boolean, onCheckedChange: (Boolean)
 
 @Composable
 fun ParkingLayout(
-    spots: List<ParkingSpotData>, 
-    combustion: Boolean, 
-    electric: Boolean, 
-    pmr: Boolean, 
+    spots: List<ParkingSpotData>,
+    combustion: Boolean,
+    electric: Boolean,
+    pmr: Boolean,
     moto: Boolean,
     free: Boolean,
     occupied: Boolean,
-    reservations: List<ReservationEntity>, 
+    reservations: List<ReservationEntity>,
     onSpotClick: (Int) -> Unit
 ) {
     val noFiltersActive = !combustion && !electric && !pmr && !moto && !free && !occupied
@@ -667,8 +711,8 @@ suspend fun PointerInputScope.detectTransformGestures(
                     pan += panChange
 
                     val centroidSize = event.calculateCentroidSize(useCurrent = false)
-                    val zoomMotion = kotlin.math.abs(1 - zoom) * centroidSize
-                    val rotationMotion = kotlin.math.abs(rotation) * kotlin.math.PI.toFloat() * centroidSize / 180f
+                    val zoomMotion = abs(1 - zoom) * centroidSize
+                    val rotationMotion = abs(rotation) * PI.toFloat() * centroidSize / 180f
                     val panMotion = pan.getDistance()
 
                     if (zoomMotion > touchSlop || rotationMotion > touchSlop || panMotion > touchSlop) {
@@ -694,16 +738,13 @@ suspend fun PointerInputScope.detectTransformGestures(
 @Preview(showBackground = true)
 @Composable
 fun BookingScreenPreview() {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val database = AppDatabase.getDatabase(context)
-    val dao = database.appDao()
-
-    val authManager = AuthManager(context)
-    val profileViewModel = ProfileViewModel(dao, authManager)
-
-    BookingScreen(
-        onNavigate = {},
-        dao = dao,
-        profileViewModel = profileViewModel
+    BookingScreenContent(
+        onNavigate =  {},
+        userVehicles =  emptyList(),
+        getAllReservationsByDate = { flowOf(emptyList()) },
+        getFutureReservationsBySpot = { _, _ -> flowOf(emptyList()) },
+        onCreateReservation = { _, _, _, _, _, _, onSuccess -> onSuccess() },
+        errorMessage = "",
+        isLoading = false
     )
 }
