@@ -5,8 +5,8 @@ object AuthValidator {
     fun validateCorporateEmail(email: String): String? {
         val trimmedEmail = email.trim()
 
-        if (!trimmedEmail.endsWith("@lks.com")) {
-            return "Usa tu correo corporativo @lks.com"
+        if (!trimmedEmail.endsWith("@lksnext.com")) {
+            return "Usa tu correo corporativo @lksnext.com"
         }
         return null
     }
@@ -32,17 +32,5 @@ object AuthValidator {
         if (password != confirmPassword) return "Las contraseñas no coinciden"
 
         return null
-    }
-
-    fun validatePassswordRecovery(
-        selectedMethod: String,
-        email: String,
-        phone: String
-    ): String? {
-        return if (selectedMethod == "email") {
-            if (email.isBlank()) "Ingresa tu correo electrónico" else null
-        } else {
-            if (phone.isBlank()) "Ingresa tu número de teléfono" else null
-        }
     }
 }

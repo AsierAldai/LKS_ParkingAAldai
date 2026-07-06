@@ -11,14 +11,14 @@ class BookingValidatorTest {
     private val today = 1_700_000_000_000L
 
     private val combustionVehicle = VehicleEntity(
-        ownerEmail = "user@lks.com",
+        ownerEmail = "user@lksnext.com",
         plate = "1234ABC",
         brand = "Toyota",
         type = SpotType.COMBUSTION.name
     )
 
     private val motorcycleVehicle = VehicleEntity(
-        ownerEmail = "user@lks.com",
+        ownerEmail = "user@lksnext.com",
         plate = "9999MOTO",
         brand = "Yamaha",
         type = SpotType.MOTORCYCLE.name

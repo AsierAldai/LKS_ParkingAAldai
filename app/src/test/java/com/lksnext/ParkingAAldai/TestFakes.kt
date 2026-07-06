@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
 class FakeAuthDataSource(
-    var currentEmail: String? = "user@lks.com"
+    var currentEmail: String? = "user@lksnext.com"
 ) : AuthDataSource {
 
     var loginSuccess = true
@@ -22,6 +22,9 @@ class FakeAuthDataSource(
     var registerCalled = false
     var logoutCalled = false
     var updateSessionCalled = false
+    var passwordResetSuccess = true
+    var passwordResetCalled = false
+    var passwordResetEmail: String? = null
 
     override fun registerWithFirebase(
         email: String,
@@ -58,6 +61,15 @@ class FakeAuthDataSource(
         updateSessionCalled = true
         if (updateSuccess) currentEmail = newEmail
         onResult(updateSuccess, error)
+    }
+
+    override fun sendPasswordResetEmail(
+        email: String,
+        onResult: (Boolean, String?) -> Unit
+    ) {
+        passwordResetCalled = true
+        passwordResetEmail = email
+        onResult(passwordResetSuccess, error)
     }
 }
 

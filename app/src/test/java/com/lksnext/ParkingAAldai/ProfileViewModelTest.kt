@@ -32,17 +32,17 @@ class ProfileViewModelTest {
     @Test
     fun loadUserDataWithExistingUser_updatesState() = runTest(mainDispatcherRule.testDispatcher) {
         val repo = FakeParkingRepository()
-        repo.users["user@lks.com"] = UserEntity(
-            email = "user@lks.com",
+        repo.users["user@lksnext.com"] = UserEntity(
+            email = "user@lksnext.com",
             name = "Asier",
             username = "asier",
             phone = "666777888"
         )
 
-        val viewModel = ProfileViewModel(repo, FakeAuthDataSource("user@lks.com"))
+        val viewModel = ProfileViewModel(repo, FakeAuthDataSource("user@lksnext.com"))
         testScheduler.advanceUntilIdle()
 
-        assertEquals("user@lks.com", viewModel.email.value)
+        assertEquals("user@lksnext.com", viewModel.email.value)
         assertEquals("Asier", viewModel.name.value)
         assertEquals("asier", viewModel.username.value)
         assertEquals("666777888", viewModel.phone.value)
@@ -51,7 +51,7 @@ class ProfileViewModelTest {
     @Test
     fun addVehicle_insertsVehicleForCurrentUser() = runTest(mainDispatcherRule.testDispatcher) {
         val repo = FakeParkingRepository()
-        val viewModel = ProfileViewModel(repo, FakeAuthDataSource("user@lks.com"))
+        val viewModel = ProfileViewModel(repo, FakeAuthDataSource("user@lksnext.com"))
 
         viewModel.addVehicle(
             plate = "1234ABC",
@@ -62,7 +62,7 @@ class ProfileViewModelTest {
         testScheduler.advanceUntilIdle()
 
         assertEquals(1, repo.vehicles.size)
-        assertEquals("user@lks.com", repo.vehicles.first().ownerEmail)
+        assertEquals("user@lksnext.com", repo.vehicles.first().ownerEmail)
         assertEquals("1234ABC", repo.vehicles.first().plate)
     }
 
@@ -84,28 +84,28 @@ class ProfileViewModelTest {
     @Test
     fun updateProfileSuccess_updatesUserAndVehicleOwnerEmail() = runTest(mainDispatcherRule.testDispatcher) {
         val repo = FakeParkingRepository()
-        val auth = FakeAuthDataSource("old@lks.com")
+        val auth = FakeAuthDataSource("old@lksnext.com")
         val viewModel = ProfileViewModel(repo, auth)
 
         viewModel.updateProfile(
             newName = "Nuevo",
             newUsername = "nuevo",
-            newEmail = "new@lks.com",
+            newEmail = "new@lksnext.com",
             newPhone = "999888777",
             currentPassword = "123456"
         )
         testScheduler.advanceUntilIdle()
 
         assertEquals("", viewModel.errorMessage.value)
-        assertEquals("old@lks.com" to "new@lks.com", repo.updatedVehiclesOwnerEmail)
-        assertEquals("old@lks.com", repo.deletedUserEmail)
-        assertEquals("Nuevo", repo.users["new@lks.com"]?.name)
+        assertEquals("old@lksnext.com" to "new@lksnext.com", repo.updatedVehiclesOwnerEmail)
+        assertEquals("old@lksnext.com", repo.deletedUserEmail)
+        assertEquals("Nuevo", repo.users["new@lksnext.com"]?.name)
     }
 
     @Test
     fun updateProfileFailure_setsError() {
         val repo = FakeParkingRepository()
-        val auth = FakeAuthDataSource("user@lks.com").apply {
+        val auth = FakeAuthDataSource("user@lksnext.com").apply {
             updateSuccess = false
             error = "Contraseña incorrecta"
         }
@@ -114,7 +114,7 @@ class ProfileViewModelTest {
         viewModel.updateProfile(
             newName = "Nuevo",
             newUsername = "nuevo",
-            newEmail = "new@lks.com",
+            newEmail = "new@lksnext.com",
             newPhone = "999888777",
             currentPassword = "bad"
         )
@@ -124,11 +124,11 @@ class ProfileViewModelTest {
 
     @Test
     fun logout_clearsStateAndCallsAuth() {
-        val auth = FakeAuthDataSource("user@lks.com")
+        val auth = FakeAuthDataSource("user@lksnext.com")
         val viewModel = ProfileViewModel(FakeParkingRepository(), auth)
 
         viewModel.name.value = "Asier"
-        viewModel.email.value = "user@lks.com"
+        viewModel.email.value = "user@lksnext.com"
 
         viewModel.logout()
 

@@ -18,12 +18,12 @@ class NotificationsVIewModelTest {
     fun notification_containsCurrentUserNotifications() = runTest(mainDispatcherRule.testDispatcher) {
         val repo = FakeParkingRepository()
         val notification = NotificationEntity(
-            userEmail = "user@lks.com",
+            userEmail = "user@lksnext.com",
             title = "Reserva Confirmada"
         )
         repo.notifications.add(notification)
 
-        val viewModel = NotificationsViewModel(repo, FakeAuthDataSource("user@lks.com"))
+        val viewModel = NotificationsViewModel(repo, FakeAuthDataSource("user@lksnext.com"))
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.notifications.collect {}
         }
@@ -35,11 +35,11 @@ class NotificationsVIewModelTest {
     @Test
     fun markAllAsRead_callsRepositoryWithCurrentEmail() = runTest(mainDispatcherRule.testDispatcher) {
         val repo = FakeParkingRepository()
-        val viewModel = NotificationsViewModel(repo, FakeAuthDataSource("user@lks.com"))
+        val viewModel = NotificationsViewModel(repo, FakeAuthDataSource("user@lksnext.com"))
 
         viewModel.markAllAsRead()
         testScheduler.advanceUntilIdle()
 
-        assertEquals("user@lks.com", repo.markedAsReadEmail)
+        assertEquals("user@lksnext.com", repo.markedAsReadEmail)
     }
 }

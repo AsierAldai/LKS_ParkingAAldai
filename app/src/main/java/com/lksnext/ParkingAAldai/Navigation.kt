@@ -100,7 +100,7 @@ fun AppNavigation(navController: NavHostController) {
                                 }
                             ) {
                                 Icon(
-                                    imageVector = androidx.compose.material.icons.Icons.Outlined.Notifications,
+                                    imageVector = Icons.Outlined.Notifications,
                                     contentDescription = "Notificaciones",
                                     tint = OrangePrimary,
                                     modifier = Modifier.size(26.dp)
@@ -162,12 +162,17 @@ fun AppNavigation(navController: NavHostController) {
 
                 RegisterScreen(
                     onBackToLogin = { navController.popBackStack() },
+                    onRegisterSuccess = {
+                        navController.popBackStack()
+                    },
                     viewModel = registerViewModel
                 )
             }
 
             composable("forgot_password") {
-                val forgotPasswordViewModel: ForgotPasswordViewModel = viewModel()
+                val forgotPasswordViewModel: ForgotPasswordViewModel = viewModel(
+                    factory = appViewModelFactory { ForgotPasswordViewModel(authManager) }
+                )
 
                 ForgotPasswordScreen(
                     onBack = { navController.popBackStack() },

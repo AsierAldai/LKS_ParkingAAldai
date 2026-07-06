@@ -5,12 +5,33 @@ plugins {
     alias(libs.plugins.google.services)
     alias(libs.plugins.firebase.crashlytics)
     alias(libs.plugins.sonar)
+    alias(libs.plugins.kover)
 }
 
 sonar {
     properties {
         property("sonar.projectKey", "AsierAldai_LKS_ParkingAAldai")
+        property("sonar.projectName", "LKS_ParkingAAldai")
         property("sonar.organization", "asieraldai")
+        property(
+            "sonar.coverage.jacoco.xmlReportPaths",
+            layout.buildDirectory.file("reports/kover/report.xml").get().asFile.path
+        )
+        property(
+            "sonar.coverage.exclusions",
+            listOf(
+                "**/MainActivity*",
+                "**/Navigation.kt",
+                "**/ui/screens/**",
+                "**/ui/components/**",
+                "**/ui/theme/**",
+                "**/notifications/NotificationHelper.kt",
+                "**/workers/NotificationWorker.kt",
+                "**/data/repository/FirebaseRepository.kt",
+                "**/auth/AuthManager.kt",
+                "**/auth/AuthDataSource.kt"
+            ).joinToString(",")
+        )
     }
 }
 
@@ -22,8 +43,8 @@ android {
         applicationId = "com.lksnext.ParkingAAldai"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.2"
+        versionCode = 3
+        versionName = "1.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -43,6 +64,27 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+}
+
+kover {
+    reports {
+        filters {
+            excludes {
+                classes(
+                    "com.lksnext.ParkingAAldai.MainActivity*",
+                    "com.lksnext.ParkingAAldai.ComposableSingletons*",
+                    "com.lksnext.ParkingAAldai.NavigationKt*",
+                    "com.lksnext.ParkingAAldai.ui.screens.*",
+                    "com.lksnext.ParkingAAldai.ui.components.*",
+                    "com.lksnext.ParkingAAldai.ui.theme.*",
+                    "com.lksnext.ParkingAAldai.notifications.NotificationHelper",
+                    "com.lksnext.ParkingAAldai.workers.NotificationWorker",
+                    "com.lksnext.ParkingAAldai.data.repository.FirebaseRepository*",
+                    "com.lksnext.ParkingAAldai.auth.*"
+                )
+            }
+        }
     }
 }
 

@@ -18,7 +18,7 @@ class BookingViewModelTest {
     private val today = System.currentTimeMillis().normalizeToStartOfDay()
 
     private val vehicle = VehicleEntity(
-        ownerEmail = "user@lks.com",
+        ownerEmail = "user@lksnext.com",
         plate = "1234ABC",
         brand = "Toyota",
         type = SpotType.COMBUSTION.name
@@ -46,7 +46,7 @@ class BookingViewModelTest {
         val repo = FakeParkingRepository()
         repo.reservations.add(
             ReservationEntity(
-                userEmail = "other@lks.com",
+                userEmail = "other@lksnext.com",
                 spotIndex = 3,
                 spotType = SpotType.COMBUSTION.name,
                 dateMillis = today,
@@ -75,7 +75,7 @@ class BookingViewModelTest {
     @Test
     fun createReservationSuccess_insertsReservationAndNotification() = runTest(mainDispatcherRule.testDispatcher) {
         val repo = FakeParkingRepository()
-        val viewModel = BookingViewModel(repo, FakeAuthDataSource("user@lks.com"))
+        val viewModel = BookingViewModel(repo, FakeAuthDataSource("user@lksnext.com"))
         var successCalled = false
 
         viewModel.reservationName.value = "Mi reserva"

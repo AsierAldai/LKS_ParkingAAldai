@@ -16,7 +16,7 @@ class LoginViewModelTest {
 
         viewModel.login {}
 
-        assertEquals("Usa tu correo corporativo @lks.com", viewModel.errorMessage.value)
+        assertEquals("Usa tu correo corporativo @lksnext.com", viewModel.errorMessage.value)
         assertFalse(auth.loginCalled)
     }
 
@@ -26,7 +26,7 @@ class LoginViewModelTest {
         val viewModel = LoginViewModel(auth)
         var successCalled = false
 
-        viewModel.email.value = "user@lks.com"
+        viewModel.email.value = "user@lksnext.com"
         viewModel.password.value = "123456"
 
         viewModel.login { successCalled = true }
@@ -45,7 +45,7 @@ class LoginViewModelTest {
         }
         val viewModel = LoginViewModel(auth)
 
-        viewModel.email.value = "user@lks.com"
+        viewModel.email.value = "user@lksnext.com"
         viewModel.password.value = "wrong"
 
         viewModel.login {}
