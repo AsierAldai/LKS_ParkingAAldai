@@ -20,13 +20,13 @@ class MyBookingsViewModelTest {
         val repo = FakeParkingRepository()
         val reservation = ReservationEntity(
             id = 1,
-            userEmail = "user@lks.com",
+            userEmail = "user@lksnext.com",
             spotIndex = 3,
             dateMillis = System.currentTimeMillis()
         )
         repo.reservations.add(reservation)
 
-        val viewModel = MyBookingsViewModel(repo, FakeAuthDataSource("user@lks.com"))
+        val viewModel = MyBookingsViewModel(repo, FakeAuthDataSource("user@lksnext.com"))
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.bookings.collect {}
         }
@@ -40,7 +40,7 @@ class MyBookingsViewModelTest {
         val repo = FakeParkingRepository()
         val reservation = ReservationEntity(
             id = 1,
-            userEmail = "user@lks.com"
+            userEmail = "user@lksnext.com"
         )
         val viewModel = MyBookingsViewModel(repo, FakeAuthDataSource())
 

@@ -6,4 +6,11 @@ plugins {
     alias(libs.plugins.google.services) apply false
     alias(libs.plugins.firebase.crashlytics) apply false
     alias(libs.plugins.sonar) apply false
+    alias(libs.plugins.kover) apply false
+}
+
+allprojects {
+    dependencyLocking {
+        lockAllConfigurations()
+    }
 }

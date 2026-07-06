@@ -5,6 +5,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.lksnext.ParkingAAldai.data.models.NotificationEntity
 import com.lksnext.ParkingAAldai.data.repository.FirebaseRepository
+import com.lksnext.ParkingAAldai.notifications.NotificationHelper
 
 class NotificationWorker(
     context: Context,
@@ -26,6 +27,13 @@ class NotificationWorker(
                     isRead = false
                 )
             )
+
+            NotificationHelper.showNotification(
+                context = applicationContext,
+                title = "LKS Parking",
+                body = title
+            )
+
             return Result.success()
         } catch (e: Exception) {
             return Result.retry()

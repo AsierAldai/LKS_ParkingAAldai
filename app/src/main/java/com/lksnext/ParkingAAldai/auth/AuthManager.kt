@@ -73,4 +73,18 @@ class AuthManager(context: Context) : AuthDataSource {
             onResult(false, "No hay sesión activa.")
         }
     }
+
+    override fun sendPasswordResetEmail(
+        email: String,
+        onResult: (Boolean, String?) -> Unit
+    ) {
+        auth.sendPasswordResetEmail(email)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    onResult(true, null)
+                } else {
+                    onResult(false, task.exception?.message)
+                }
+            }
+    }
 }

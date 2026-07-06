@@ -23,7 +23,7 @@ class ReservationFlowInstrumentedTest {
     private val selectedDate = 1_700_000_000_000L
 
     private val combustionVehicle = VehicleEntity(
-        ownerEmail = "user@lks.com",
+        ownerEmail = "user@lksnext.com",
         plate = "1234ABC",
         brand = "Toyota",
         type = SpotType.COMBUSTION.name

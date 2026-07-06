@@ -7,4 +7,5 @@ interface AuthDataSource {
     fun getUserEmailWithFirebase(): String?
     fun updateSessionWithFirebase(newEmail: String, currentPassword: String, onResult: (Boolean, String?) -> Unit)
 
+    fun sendPasswordResetEmail(email: String, onResult: (Boolean, String?) -> Unit)
 }

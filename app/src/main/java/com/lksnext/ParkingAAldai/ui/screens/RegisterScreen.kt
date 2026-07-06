@@ -33,6 +33,7 @@ import com.lksnext.ParkingAAldai.ui.viewmodels.RegisterViewModel
 @Composable
 fun RegisterScreen(
     onBackToLogin: () -> Unit,
+    onRegisterSuccess: () -> Unit,
     viewModel: RegisterViewModel
 ) {
     RegisterScreenContent(
@@ -49,7 +50,7 @@ fun RegisterScreen(
         onPhoneChange = { viewModel.phone.value = it },
         onPasswordChange = { viewModel.password.value = it },
         onConfirmPasswordChange = { viewModel.confirmPassword.value = it },
-        onRegisterClick = { viewModel.register(onBackToLogin) },
+        onRegisterClick = { viewModel.register(onRegisterSuccess) },
         onBackToLogin = onBackToLogin
     )
 }
@@ -147,7 +148,7 @@ fun RegisterScreenContent(
                 label = "Correo electrónico",
                 value = email,
                 onValueChange = { onEmailChange(it) },
-                placeholder = "correo@lks.com"
+                placeholder = "correo@lksnext.com"
             )
 
             Spacer(modifier = Modifier.height(16.dp))

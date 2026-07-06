@@ -2,13 +2,14 @@ package com.lksnext.ParkingAAldai.ui.viewmodels
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import com.lksnext.ParkingAAldai.auth.AuthDataSource
 import com.lksnext.ParkingAAldai.validation.AuthValidator
 
-class ForgotPasswordViewModel : ViewModel() {
+class ForgotPasswordViewModel(
+    private val authManager: AuthDataSource
+) : ViewModel() {
 
-    var selectedMethod = mutableStateOf("email")
     var emailValue = mutableStateOf("")
-    var phoneValue = mutableStateOf("")
     var successMessage = mutableStateOf("")
     var errorMessage = mutableStateOf("")
     var isLoading = mutableStateOf(false)
@@ -17,21 +18,27 @@ class ForgotPasswordViewModel : ViewModel() {
         errorMessage.value = ""
         successMessage.value = ""
 
-        AuthValidator.validatePassswordRecovery(
-            selectedMethod = selectedMethod.value,
-            email = emailValue.value,
-            phone = phoneValue.value
-        )?.let {
+        val email = emailValue.value.trim()
+
+        if (email.isBlank()) {
+            errorMessage.value = "Ingresa tu correo electrónico"
+            return
+        }
+
+        AuthValidator.validateCorporateEmail(email)?.let {
             errorMessage.value = it
             return
         }
 
         isLoading.value = true
-        successMessage.value = if (selectedMethod.value == "email") {
-            "Se ha enviado un enlace de recuperación a tu ${emailValue.value}"
-        } else {
-            "Se ha enviado un código a ${phoneValue.value}"
+
+        authManager.sendPasswordResetEmail(email) { success, firebaseError ->
+            isLoading.value = false
+            if (success) {
+                successMessage.value = "Se ha enviado un enlace de recuperación a tu $email"
+            } else {
+                errorMessage.value = firebaseError ?: "No se pudo enviar el enlaec de recuperación"
+            }
         }
-        isLoading.value = false
     }
 }

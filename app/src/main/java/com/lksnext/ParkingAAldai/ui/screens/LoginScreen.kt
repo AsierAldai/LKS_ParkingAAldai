@@ -122,7 +122,7 @@ private fun LoginScreenContent(
                 OutlinedTextField(
                     value = email,
                     onValueChange = onEmailChange,
-                    placeholder = { Text("ejemplo@lks.com") },
+                    placeholder = { Text("ejemplo@lksnext.com") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(

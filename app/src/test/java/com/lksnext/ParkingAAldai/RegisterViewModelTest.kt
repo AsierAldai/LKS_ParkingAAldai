@@ -19,7 +19,7 @@ class RegisterViewModelTest {
 
         viewModel.name.value = ""
         viewModel.username.value = "user"
-        viewModel.email.value = "user@lks.com"
+        viewModel.email.value = "user@lksnext.com"
         viewModel.password.value = "123456"
         viewModel.confirmPassword.value = "123456"
 
@@ -38,7 +38,7 @@ class RegisterViewModelTest {
 
         viewModel.name.value = "Asier"
         viewModel.username.value = "asier"
-        viewModel.email.value = "asier@lks.com"
+        viewModel.email.value = "asier@lksnext.com"
         viewModel.phone.value = "666777888"
         viewModel.password.value = "123456"
         viewModel.confirmPassword.value = "123456"
@@ -49,7 +49,7 @@ class RegisterViewModelTest {
         assertTrue(auth.registerCalled)
         assertTrue(successCalled)
         assertFalse(viewModel.isLoading.value)
-        assertEquals("Asier", repo.users["asier@lks.com"]?.name)
+        assertEquals("Asier", repo.users["asier@lksnext.com"]?.name)
     }
 
     @Test
@@ -63,7 +63,7 @@ class RegisterViewModelTest {
 
         viewModel.name.value = "Asier"
         viewModel.username.value = "asier"
-        viewModel.email.value = "asier@lks.com"
+        viewModel.email.value = "asier@lksnext.com"
         viewModel.password.value = "123456"
         viewModel.confirmPassword.value = "123456"
 

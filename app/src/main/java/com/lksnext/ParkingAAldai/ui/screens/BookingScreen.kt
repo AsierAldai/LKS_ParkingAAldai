@@ -36,6 +36,7 @@ import androidx.work.workDataOf
 import com.lksnext.ParkingAAldai.ui.viewmodels.ProfileViewModel
 import com.lksnext.ParkingAAldai.data.models.ReservationEntity
 import com.lksnext.ParkingAAldai.data.models.VehicleEntity
+import com.lksnext.ParkingAAldai.notifications.NotificationHelper
 import com.lksnext.ParkingAAldai.ui.components.ReservationSheet
 import com.lksnext.ParkingAAldai.ui.components.getSpotPrefix
 import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
@@ -141,7 +142,6 @@ private fun BookingScreenContent(
     var filterFree by remember { mutableStateOf(false) }
     var filterOccupied by remember { mutableStateOf(false) }
 
-    val scope = rememberCoroutineScope()
     var selectedSpotIndex by remember { mutableStateOf<Int?>(null) }
 
     // Obtenemos reservas futuras de la plaza (incluyendo otros días para mostrar información)
@@ -456,6 +456,12 @@ private fun BookingScreenContent(
                         start,
                         end
                     ) {
+                        NotificationHelper.showNotification(
+                            context = context,
+                            title = "Reserva confirmada",
+                            body = "Tu reserva en la plaza $prefix-$spotIndex ha sido confirmada"
+                        )
+
                         val workManager = WorkManager.getInstance(context)
 
                         val endParts = end.split(":")
