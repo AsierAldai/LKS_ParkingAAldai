@@ -1,7 +1,8 @@
 package com.lksnext.ParkingAAldai.data.repository
 
+import android.util.Log
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
 import com.lksnext.ParkingAAldai.data.models.NotificationEntity
 import com.lksnext.ParkingAAldai.data.models.ReservationEntity
 import com.lksnext.ParkingAAldai.data.models.UserEntity
@@ -20,6 +21,9 @@ class FirebaseRepository : ParkingRepository {
     private val reservationsRef = db.collection("reservations")
     private val notificationsRef = db.collection("notifications")
 
+    private companion object {
+        private const val TAG = "FirebaseRepository"
+    }
 
     override suspend fun insertUser(user: UserEntity) {
         usersRef.document(user.email).set(user).await()
@@ -71,14 +75,24 @@ class FirebaseRepository : ParkingRepository {
         docRef.set(finalReservation).await()
     }
 
-    override fun getReservationsByUser(email: String, minDateMillis: Long): Flow<List<ReservationEntity>> =
+    override fun getReservationsByUser(email: String, winDateMillis: Long): Flow<List<ReservationEntity>> =
         callbackFlow {
             val listener = reservationsRef
                 .whereEqualTo("userEmail", email)
-                .whereGreaterThanOrEqualTo("dateMillis", minDateMillis)
-                .orderBy("dateMillis", Query.Direction.DESCENDING)
-                .addSnapshotListener { snapshot, _ ->
-                    val list = snapshot?.toObjects(ReservationEntity::class.java) ?: emptyList()
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        Log.e(TAG, "Error loading reservations for $email", error)
+                        this.trySendBlocking(emptyList())
+                        return@addSnapshotListener
+                    }
+
+                    val list = snapshot?.toObjects(ReservationEntity::class.java)
+                        ?.filter { it.dateMillis >= winDateMillis }
+                        ?.sortedWith(
+                            compareByDescending<ReservationEntity> { it.dateMillis }
+                                .thenBy { it.startTime }
+                        )
+                        ?: emptyList()
                     this.trySendBlocking(list)
                 }
             awaitClose { listener.remove() }
@@ -87,7 +101,13 @@ class FirebaseRepository : ParkingRepository {
     override fun getAllReservationsByDate(date: Long): Flow<List<ReservationEntity>> = callbackFlow {
         val listener = reservationsRef
             .whereEqualTo("dateMillis", date)
-            .addSnapshotListener { snapshot, _ ->
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e(TAG, "Error loading reservations for date $date", error)
+                    this.trySendBlocking(emptyList())
+                    return@addSnapshotListener
+                }
+
                 val list = snapshot?.toObjects(ReservationEntity::class.java) ?: emptyList()
                 this.trySendBlocking(list)
             }
@@ -98,11 +118,17 @@ class FirebaseRepository : ParkingRepository {
         callbackFlow {
             val listener = reservationsRef
                 .whereEqualTo("spotIndex", spotIndex)
-                .whereGreaterThanOrEqualTo("dateMillis", minDateMillis)
-                .orderBy("dateMillis", Query.Direction.ASCENDING)
-                .orderBy("startTime", Query.Direction.ASCENDING)
-                .addSnapshotListener { snapshot, _ ->
-                    val list = snapshot?.toObjects(ReservationEntity::class.java) ?: emptyList()
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        Log.e(TAG, "Error loading future reservations for spot $spotIndex", error)
+                        this.trySendBlocking(emptyList())
+                        return@addSnapshotListener
+                    }
+
+                    val list = snapshot?.toObjects(ReservationEntity::class.java)
+                        ?.filter { it.dateMillis >= minDateMillis }
+                        ?.sortedWith(compareBy<ReservationEntity> { it.dateMillis }.thenBy { it.startTime })
+                        ?: emptyList()
                     this.trySendBlocking(list)
                 }
             awaitClose { listener.remove() }
@@ -113,7 +139,13 @@ class FirebaseRepository : ParkingRepository {
             val listener = reservationsRef
                 .whereEqualTo("spotIndex", spotIndex)
                 .whereEqualTo("dateMillis", dateMillis)
-                .addSnapshotListener { snapshots, _ ->
+                .addSnapshotListener { snapshots, error ->
+                    if (error != null) {
+                        Log.e(TAG, "Error loading other reservations for spot $spotIndex", error)
+                        this.trySendBlocking(emptyList())
+                        return@addSnapshotListener
+                    }
+
                     val list = snapshots?.toObjects(ReservationEntity::class.java)
                         ?.filter { it.id != excludeId } ?: emptyList()
                     this.trySendBlocking(list)
@@ -138,15 +170,23 @@ class FirebaseRepository : ParkingRepository {
     override suspend fun insertNotification(notification: NotificationEntity) {
         val docRef = notificationsRef.document()
         val finalNotification = notification.copy(id = docRef.id.hashCode())
-        docRef.set(finalNotification).await()
+        docRef.set(finalNotification.toFirestoreMap()).await()
     }
 
     override fun getNotificationsByUser(email: String): Flow<List<NotificationEntity>> = callbackFlow {
         val listener = notificationsRef
             .whereEqualTo("userEmail", email)
-            .orderBy("timestamp", Query.Direction.DESCENDING)
-            .addSnapshotListener { snapshot, _ ->
-                val list = snapshot?.toObjects(NotificationEntity::class.java) ?: emptyList()
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e(TAG, "Error loading notifications for $email", error)
+                    this.trySendBlocking(emptyList())
+                    return@addSnapshotListener
+                }
+
+                val list = snapshot?.documents
+                    ?.map { it.toNotificationEntity() }
+                    ?.sortedByDescending { it.timestamp }
+                    ?: emptyList()
                 this.trySendBlocking(list)
             }
         awaitClose { listener.remove() }
@@ -155,12 +195,19 @@ class FirebaseRepository : ParkingRepository {
     override suspend fun markAllAsRead(email: String) {
         val snapshot = notificationsRef
             .whereEqualTo("userEmail", email)
-            .whereEqualTo("isRead", false)
             .get().await()
 
         db.runBatch { batch ->
             for (doc in snapshot.documents) {
-                batch.update(doc.reference, "isRead", true)
+                if (!doc.isNotificationRead()) {
+                    batch.update(
+                        doc.reference,
+                        mapOf(
+                            "isRead" to true,
+                            "read" to true
+                        )
+                    )
+                }
             }
         }.await()
     }
@@ -168,11 +215,38 @@ class FirebaseRepository : ParkingRepository {
     override fun getUnreadCount(email: String): Flow<Int> = callbackFlow {
         val listener = notificationsRef
             .whereEqualTo("userEmail", email)
-            .whereEqualTo("isRead", false)
-            .addSnapshotListener { snapshot, _ ->
-                val size = snapshot?.size() ?: 0
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e(TAG, "Error loading unread count for $email", error)
+                    this.trySendBlocking(0)
+                    return@addSnapshotListener
+                }
+
+                val size = snapshot?.documents
+                    ?.count { !it.isNotificationRead() } ?: 0
                 this.trySendBlocking(size)
             }
         awaitClose { listener.remove() }
     }
+
+    private fun NotificationEntity.toFirestoreMap(): Map<String, Any> =
+        mapOf(
+            "id" to id,
+            "userEmail" to userEmail,
+            "title" to title,
+            "timestamp" to timestamp,
+            "isRead" to isRead
+        )
+
+    private fun DocumentSnapshot.toNotificationEntity(): NotificationEntity =
+        NotificationEntity(
+            id = getLong("id")?.toInt() ?: id.hashCode(),
+            userEmail = getString("userEmail").orEmpty(),
+            title = getString("title").orEmpty(),
+            timestamp = getLong("timestamp") ?: 0L,
+            isRead = isNotificationRead()
+        )
+
+    private fun DocumentSnapshot.isNotificationRead(): Boolean =
+        getBoolean("isRead") ?: getBoolean("read") ?: false
 }

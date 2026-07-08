@@ -8,6 +8,7 @@ import com.lksnext.ParkingAAldai.data.models.UserEntity
 import com.lksnext.ParkingAAldai.data.models.VehicleEntity
 import com.lksnext.ParkingAAldai.data.repository.ParkingRepository
 import com.lksnext.ParkingAAldai.ui.screens.SpotType
+import com.lksnext.ParkingAAldai.validation.AuthValidator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -91,6 +92,28 @@ class ProfileViewModel(
     var errorMessage = mutableStateOf("")
 
     fun updateProfile(newName: String, newUsername: String, newEmail: String, newPhone: String, currentPassword: String) {
+        errorMessage.value = ""
+
+        if (newName.isBlank()) {
+            errorMessage.value = "El nombre no puede estar vacío"
+            return
+        }
+
+        if (newUsername.isBlank()) {
+            errorMessage.value = "El nombre de usuario no puede estar vacío"
+            return
+        }
+
+        AuthValidator.validateCorporateEmail(newEmail)?.let {
+            errorMessage.value = it
+            return
+        }
+
+        if (currentPassword.isBlank()) {
+            errorMessage.value = "Ingresa tu contraseña actual"
+            return
+        }
+
         val oldEmail = getCurrentEmail()
         authManager.updateSessionWithFirebase(newEmail, currentPassword) { success, firebaseError ->
             if (success) {

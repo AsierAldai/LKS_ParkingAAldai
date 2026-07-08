@@ -5,14 +5,24 @@ object AuthValidator {
     fun validateCorporateEmail(email: String): String? {
         val trimmedEmail = email.trim()
 
+        if (trimmedEmail.isBlank()) {
+            return "Ingresa tu correo electrónico"
+        }
+
         if (!trimmedEmail.endsWith("@lksnext.com")) {
             return "Usa tu correo corporativo @lksnext.com"
         }
         return null
     }
 
-    fun validateLogin(email: String): String? {
-        return validateCorporateEmail(email)
+    fun validateLogin(email: String, password: String): String? {
+        validateCorporateEmail(email)?.let { return it }
+
+        if (password.isBlank()) {
+            return "Ingresa tu contraseña"
+        }
+
+        return null
     }
 
     fun validateRegister(

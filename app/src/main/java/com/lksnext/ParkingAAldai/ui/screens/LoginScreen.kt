@@ -103,7 +103,7 @@ private fun LoginScreenContent(
             // Title
             Text(
                 text = "Inicio de Sesión",
-                fontSize = 32.sp,
+                fontSize = 34.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextDark,
                 textAlign = TextAlign.Center
@@ -181,7 +181,7 @@ private fun LoginScreenContent(
             ) {
                 Text(
                     text = "Iniciar Sesión",
-                    fontSize = 18.sp,
+                    fontSize = 19.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )

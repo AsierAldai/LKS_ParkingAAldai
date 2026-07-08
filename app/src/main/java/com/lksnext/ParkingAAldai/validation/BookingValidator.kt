@@ -3,12 +3,20 @@ package com.lksnext.ParkingAAldai.validation
 import com.lksnext.ParkingAAldai.data.models.ReservationEntity
 import com.lksnext.ParkingAAldai.data.models.VehicleEntity
 import com.lksnext.ParkingAAldai.ui.screens.SpotType
+import java.util.Calendar
+import java.util.TimeZone
 
 object BookingValidator {
     private const val MIN_RESERVATION_MINUTES = 1
     private const val MAX_RESERVATION_MINUTES = 9 * 60
     private const val OPENING_MINUTES = 8 * 60
     private const val CLOSING_MINUTES = 19 * 60
+
+    enum class ReservationStatus {
+        UPCOMING,
+        ACTIVE,
+        FINISHED
+    }
 
     fun validateReservation(
         spotIndex: Int,
@@ -100,6 +108,37 @@ object BookingValidator {
         return start < otherEnd && end > otherStart
     }
 
+    fun isSpotOccupied(
+        reservation: ReservationEntity,
+        selectedDateMillis: Long,
+        nowMillis: Long = System.currentTimeMillis()
+    ): Boolean {
+        return getReservationStatus(reservation, selectedDateMillis, nowMillis) == ReservationStatus.ACTIVE
+    }
+
+    fun getReservationStatus(
+        reservation: ReservationEntity,
+        selectedDateMillis: Long = reservation.dateMillis,
+        nowMillis: Long = System.currentTimeMillis()
+    ): ReservationStatus {
+        if (reservation.dateMillis != selectedDateMillis) return ReservationStatus.FINISHED
+
+        val selectedDay = normalizeToStartOfDay(selectedDateMillis)
+        val today = normalizeToStartOfDay(nowMillis)
+
+        if (selectedDay > today) return ReservationStatus.UPCOMING
+        if (selectedDay < today) return ReservationStatus.FINISHED
+
+        val reservationStart = combineLocalDateAndTime(reservation.dateMillis, reservation.startTime)
+        val reservationEnd = combineLocalDateAndTime(reservation.dateMillis, reservation.endTime)
+
+        return when {
+            nowMillis < reservationStart -> ReservationStatus.UPCOMING
+            nowMillis < reservationEnd -> ReservationStatus.ACTIVE
+            else -> ReservationStatus.FINISHED
+        }
+    }
+
     fun timeToMinutesOrNull(time: String): Int? {
         val parts = time.split(":")
         if (parts.size != 2) return null
@@ -110,5 +149,29 @@ object BookingValidator {
         if (hour !in 0..23 || minute !in 0..59) return null
 
         return hour * 60 + minute
+    }
+
+    fun normalizeToStartOfDay(millis: Long): Long {
+        val cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        cal.timeInMillis = millis
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        return cal.timeInMillis
+    }
+
+    private fun combineLocalDateAndTime(dateMillis: Long, time: String): Long {
+        val parts = time.split(":")
+        val hour = parts[0].toIntOrNull() ?: return dateMillis
+        val minute = parts.getOrNull(1)?.toIntOrNull() ?: return dateMillis
+
+        val cal = Calendar.getInstance()
+        cal.timeInMillis = dateMillis
+        cal.set(Calendar.HOUR_OF_DAY, hour)
+        cal.set(Calendar.MINUTE, minute)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        return cal.timeInMillis
     }
 }

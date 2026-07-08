@@ -35,11 +35,27 @@ class NotificationsVIewModelTest {
     @Test
     fun markAllAsRead_callsRepositoryWithCurrentEmail() = runTest(mainDispatcherRule.testDispatcher) {
         val repo = FakeParkingRepository()
+        repo.notifications.add(
+            NotificationEntity(
+                userEmail = "user@lksnext.com",
+                title = "Reserva Confirmada",
+                isRead = false
+            )
+        )
+        repo.notifications.add(
+            NotificationEntity(
+                userEmail = "other@lksnext.com",
+                title = "Otra reserva",
+                isRead = false
+            )
+        )
         val viewModel = NotificationsViewModel(repo, FakeAuthDataSource("user@lksnext.com"))
 
         viewModel.markAllAsRead()
         testScheduler.advanceUntilIdle()
 
         assertEquals("user@lksnext.com", repo.markedAsReadEmail)
+        assertTrue(repo.notifications.first { it.userEmail == "user@lksnext.com" }.isRead)
+        assertFalse(repo.notifications.first { it.userEmail == "other@lksnext.com" }.isRead)
     }
 }

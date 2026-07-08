@@ -18,7 +18,7 @@ class LoginViewModel (
 
         errorMessage.value = ""
 
-        AuthValidator.validateLogin(emailTrimmed)?.let {
+        AuthValidator.validateLogin(emailTrimmed, password.value)?.let {
             errorMessage.value = it
             return
         }

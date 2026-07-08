@@ -1,5 +1,6 @@
 package com.lksnext.ParkingAAldai.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -12,7 +13,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -20,8 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
 import com.lksnext.ParkingAAldai.data.models.NotificationEntity
 import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 import com.lksnext.ParkingAAldai.ui.viewmodels.NotificationsViewModel
@@ -36,15 +37,23 @@ fun NotificationsScreen(
     onBack: () -> Unit
 ) {
     val notifications by viewModel.notifications.collectAsState(initial = emptyList())
+    var isLeaving by remember { mutableStateOf(false) }
 
-    // Marcar como leídas al salir
-    LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
-        viewModel.markAllAsRead()
+    fun markAsReadAndLeave() {
+        if (isLeaving) return
+        isLeaving = true
+        viewModel.markAllAsRead {
+            onBack()
+        }
+    }
+
+    BackHandler {
+        markAsReadAndLeave()
     }
 
     NotificationsScreenContent(
         notifications = notifications,
-        onBack = onBack
+        onBack = ::markAsReadAndLeave
     )
 }
 
@@ -133,14 +142,14 @@ fun NotificationItem(notification: NotificationEntity, isNew: Boolean) {
             Column {
                 Text(
                     text = notification.title,
-                    fontSize = 15.sp,
+                    fontSize = 16.sp,
                     color = Color(0xFF003366),
                     fontWeight = if (isNew) FontWeight.Medium else FontWeight.Normal
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = sdf.format(Date(notification.timestamp)),
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = Color.Gray
                 )
             }
@@ -159,7 +168,7 @@ fun SectionHeader(title: String) {
     ) {
         Text(
             text = title,
-            fontSize = 12.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
             color = Color.Gray,
             letterSpacing = 1.sp // Un poco de espacio entre letras para estilo "subtítulo"

@@ -88,7 +88,7 @@ fun ReservationSheet(
     ) {
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Nueva Reserva", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("Nueva Reserva", fontSize = 22.sp, fontWeight = FontWeight.Bold)
             IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, null) }
         }
 
@@ -117,8 +117,8 @@ fun ReservationSheet(
                 colors = CardDefaults.outlinedCardColors(containerColor = Color.White)
             ) {
                 Column(Modifier.padding(12.dp)) {
-                    Text("Desde", fontSize = 12.sp, color = Color.Gray)
-                    Text(startTime, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text("Desde", fontSize = 13.sp, color = Color.Gray)
+                    Text(startTime, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -128,8 +128,8 @@ fun ReservationSheet(
                 colors = CardDefaults.outlinedCardColors(containerColor = Color.White)
             ) {
                 Column(Modifier.padding(12.dp)) {
-                    Text("Hasta", fontSize = 12.sp, color = Color.Gray)
-                    Text(endTime, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text("Hasta", fontSize = 13.sp, color = Color.Gray)
+                    Text(endTime, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -137,13 +137,13 @@ fun ReservationSheet(
         if (!isTimeValid) {
             Text(
                 "Horario de 08:00 a 19:00 (Máximo 9 horas)",
-                color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp)
+                color = Color.Red, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp)
             )
         }
 
         Text("Vehículo", fontWeight = FontWeight.Bold)
         if (compatibleVehicles.isEmpty()) {
-            Text("No tienes vehículos compatibles. Puedes registrar un vehículo en tu perfil.", color = Color.Red, fontSize = 12.sp)
+            Text("No tienes vehículos compatibles. Puedes registrar un vehículo en tu perfil.", color = Color.Red, fontSize = 13.sp)
         } else {
             compatibleVehicles.forEach { vehicle ->
                 Row(
@@ -167,7 +167,7 @@ fun ReservationSheet(
         }
 
         if (futureReservations.isEmpty()) {
-            Text("No hay reservas futuras para esta plaza", color = Color.Gray, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+            Text("No hay reservas futuras para esta plaza", color = Color.Gray, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
         } else {
             val (reservationsToday, reservationsOtherDays) = remember(futureReservations, selectedDateMillis) {
                 futureReservations.partition { it.dateMillis == selectedDateMillis }
@@ -175,25 +175,25 @@ fun ReservationSheet(
 
             // --- SECCIÓN HOY ---
             if (reservationsToday.isNotEmpty()) {
-                Text("Hoy", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = OrangePrimary)
+                Text("Hoy", fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = OrangePrimary)
                 reservationsToday.forEach { res ->
-                    Text("• ${res.startTime} - ${res.endTime} (${res.vehiclePlate})", fontSize = 14.sp)
+                    Text("• ${res.startTime} - ${res.endTime} (${res.vehiclePlate})", fontSize = 15.sp)
                 }
                 Spacer(Modifier.height(8.dp))
             }
 
             // --- SECCIÓN OTROS DÍAS ---
             if (reservationsOtherDays.isNotEmpty()) {
-                Text("Próximos días", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.Gray)
+                Text("Próximos días", fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = Color.Gray)
                 val shortDateFmt = SimpleDateFormat("dd/MM", LocalLocale.current.platformLocale)
                 reservationsOtherDays.forEach { res ->
                     val dateLabel = shortDateFmt.format(Date(res.dateMillis))
-                    Text("• $dateLabel: ${res.startTime} - ${res.endTime}", fontSize = 14.sp)
+                    Text("• $dateLabel: ${res.startTime} - ${res.endTime}", fontSize = 15.sp)
                 }
             }
 
             if (futureReservations.isEmpty()) {
-                Text("No hay reservas futuras para esta plaza", color = Color.Gray, fontSize = 13.sp)
+                Text("No hay reservas futuras para esta plaza", color = Color.Gray, fontSize = 14.sp)
             }
         }
 
@@ -213,7 +213,7 @@ fun ReservationSheet(
             }
         }
         if (isSpotOccupiedByTime) {
-            Text("Esta plaza ya está ocupada en ese horario.", color = Color.Red, fontSize = 12.sp)
+            Text("Esta plaza ya está ocupada en ese horario.", color = Color.Red, fontSize = 13.sp)
         }
         if (showStartPicker) {
             val state = rememberTimePickerState(initialHour = 8, initialMinute = 0, is24Hour = true)

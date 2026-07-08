@@ -123,6 +123,24 @@ class ProfileViewModelTest {
     }
 
     @Test
+    fun updateProfileWithoutCurrentPassword_setsErrorAndDoesNotCallAuth() {
+        val repo = FakeParkingRepository()
+        val auth = FakeAuthDataSource("user@lksnext.com")
+        val viewModel = ProfileViewModel(repo, auth)
+
+        viewModel.updateProfile(
+            newName = "Nuevo",
+            newUsername = "nuevo",
+            newEmail = "new@lksnext.com",
+            newPhone = "999888777",
+            currentPassword = ""
+        )
+
+        assertEquals("Ingresa tu contraseña actual", viewModel.errorMessage.value)
+        assertFalse(auth.updateSessionCalled)
+    }
+
+    @Test
     fun logout_clearsStateAndCallsAuth() {
         val auth = FakeAuthDataSource("user@lksnext.com")
         val viewModel = ProfileViewModel(FakeParkingRepository(), auth)

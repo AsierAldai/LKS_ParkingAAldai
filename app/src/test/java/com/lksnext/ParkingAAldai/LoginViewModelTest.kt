@@ -7,6 +7,34 @@ import org.junit.Test
 class LoginViewModelTest {
 
     @Test
+    fun loginWithoutEmail_setsErrorAndDoesNotCallFirebase() {
+        val auth = FakeAuthDataSource()
+        val viewModel = LoginViewModel(auth)
+
+        viewModel.email.value = ""
+        viewModel.password.value = "123456"
+
+        viewModel.login {}
+
+        assertEquals("Ingresa tu correo electrónico", viewModel.errorMessage.value)
+        assertFalse(auth.loginCalled)
+    }
+
+    @Test
+    fun loginWithoutPassword_setsErrorAndDoesNotCallFirebase() {
+        val auth = FakeAuthDataSource()
+        val viewModel = LoginViewModel(auth)
+
+        viewModel.email.value = "user@lksnext.com"
+        viewModel.password.value = ""
+
+        viewModel.login {}
+
+        assertEquals("Ingresa tu contraseña", viewModel.errorMessage.value)
+        assertFalse(auth.loginCalled)
+    }
+
+    @Test
     fun loginWithNonCorporateEmail_setsError() {
         val auth = FakeAuthDataSource()
         val viewModel = LoginViewModel(auth)
