@@ -6,6 +6,8 @@ import com.lksnext.ParkingAAldai.ui.screens.SpotType
 import com.lksnext.ParkingAAldai.validation.BookingValidator
 import org.junit.Assert.*
 import org.junit.Test
+import java.util.Calendar
+import java.util.TimeZone
 
 class BookingValidatorTest {
     private val today = 1_700_000_000_000L
@@ -23,6 +25,8 @@ class BookingValidatorTest {
         brand = "Yamaha",
         type = SpotType.MOTORCYCLE.name
     )
+
+    private val baseDay = BookingValidator.normalizeToStartOfDay(1_700_000_000_000L)
 
     @Test
     fun validReservation_returnsNoError() {
@@ -211,5 +215,148 @@ class BookingValidatorTest {
         assertNull(BookingValidator.timeToMinutesOrNull("25:00"))
         assertNull(BookingValidator.timeToMinutesOrNull("08:70"))
         assertNull(BookingValidator.timeToMinutesOrNull("wrong"))
+    }
+
+    @Test
+     fun endedReservation_isNotOccupiedAnymore() {
+        val reservation = ReservationEntity(
+            spotIndex = 3,
+            dateMillis = baseDay,
+            startTime = "08:00",
+            endTime = "09:00"
+        )
+
+        val nowMillis = baseDay + (10L * 60 * 60 * 1000)
+
+        assertFalse(
+            BookingValidator.isSpotOccupied(
+                reservation = reservation,
+                selectedDateMillis = baseDay,
+                nowMillis = nowMillis
+            )
+        )
+    }
+
+    @Test
+    fun activeReservation_isOccupied() {
+        val reservation = ReservationEntity(
+            spotIndex = 3,
+            dateMillis = baseDay,
+            startTime = "09:00",
+            endTime = "11:00"
+        )
+
+        val nowMillis = Calendar.getInstance().apply {
+            timeInMillis = baseDay
+            set(Calendar.HOUR_OF_DAY, 10)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+
+        assertTrue(
+            BookingValidator.isSpotOccupied(
+                reservation = reservation,
+                selectedDateMillis = baseDay,
+                nowMillis = nowMillis
+            )
+        )
+    }
+
+    @Test
+    fun activeEveningReservation_usesLocalTimeForOccupancy() {
+        val originalTimeZone = TimeZone.getDefault()
+        TimeZone.setDefault(TimeZone.getTimeZone("Europe/Madrid"))
+        try {
+            val reservationDay = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+                set(2026, Calendar.JULY, 8, 0, 0, 0)
+                set(Calendar.MILLISECOND, 0)
+            }.timeInMillis
+            val nowDuringReservation = Calendar.getInstance(TimeZone.getTimeZone("Europe/Madrid")).apply {
+                set(2026, Calendar.JULY, 8, 18, 50, 0)
+                set(Calendar.MILLISECOND, 0)
+            }.timeInMillis
+
+            val reservation = ReservationEntity(
+                spotIndex = 3,
+                dateMillis = reservationDay,
+                startTime = "18:00",
+                endTime = "19:00"
+            )
+
+            assertTrue(
+                BookingValidator.isSpotOccupied(
+                    reservation = reservation,
+                    selectedDateMillis = reservationDay,
+                    nowMillis = nowDuringReservation
+                )
+            )
+        } finally {
+            TimeZone.setDefault(originalTimeZone)
+        }
+    }
+
+    @Test
+    fun futureReservation_isOccupiedForSelectedFutureDate() {
+        val reservation = ReservationEntity(
+            spotIndex = 3,
+            dateMillis = baseDay + (24L * 60 * 60 * 1000),
+            startTime = "09:00",
+            endTime = "11:00"
+        )
+
+        assertFalse(
+            BookingValidator.isSpotOccupied(
+                reservation = reservation,
+                selectedDateMillis = baseDay + (24L * 60 * 60 * 1000),
+                nowMillis = baseDay
+            )
+        )
+    }
+
+    @Test
+    fun futureReservation_hasUpcomingStatus() {
+        val reservation = ReservationEntity(
+            spotIndex = 3,
+            dateMillis = baseDay + (24L * 60 * 60 * 1000),
+            startTime = "09:00",
+            endTime = "11:00"
+        )
+
+        assertEquals(
+            BookingValidator.ReservationStatus.UPCOMING,
+            BookingValidator.getReservationStatus(
+                reservation = reservation,
+                selectedDateMillis = reservation.dateMillis,
+                nowMillis = baseDay
+            )
+        )
+    }
+
+    @Test
+    fun endedReservation_hasFinishedStatus() {
+        val reservation = ReservationEntity(
+            spotIndex = 3,
+            dateMillis = baseDay,
+            startTime = "08:00",
+            endTime = "09:00"
+        )
+
+        val nowMillis = Calendar.getInstance().apply {
+            timeInMillis = baseDay
+            set(Calendar.HOUR_OF_DAY, 10)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+
+        assertEquals(
+            BookingValidator.ReservationStatus.FINISHED,
+            BookingValidator.getReservationStatus(
+                reservation = reservation,
+                selectedDateMillis = baseDay,
+                nowMillis = nowMillis
+            )
+        )
     }
 }

@@ -13,8 +13,17 @@ class AuthManager(context: Context) : AuthDataSource {
         private const val KEY_LOGGED_IN_USER = "current_user_email"
     }
 
-    override fun registerWithFirebase(email: String, pass: String, onResult: (Boolean, String?) -> Unit) {
-        auth.createUserWithEmailAndPassword(email, pass)
+    override fun registerWithFirebase(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
+        if (email.isBlank()) {
+            onResult(false, "Ingresa tu correo electrónico")
+            return
+        }
+        if (password.isBlank()) {
+            onResult(false, "Ingresa tu contraseña")
+            return
+        }
+
+        auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     prefs.edit().putString(KEY_LOGGED_IN_USER, email).apply()
@@ -25,8 +34,17 @@ class AuthManager(context: Context) : AuthDataSource {
             }
     }
 
-    override fun loginWithFirebase(email: String, pass: String, onResult: (Boolean, String?) -> Unit) {
-        auth.signInWithEmailAndPassword(email, pass)
+    override fun loginWithFirebase(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
+        if (email.isBlank()) {
+            onResult(false, "Ingresa tu correo electrónico")
+            return
+        }
+        if (password.isBlank()) {
+            onResult(false, "Ingresa tu contraseña")
+            return
+        }
+
+        auth.signInWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     prefs.edit().putString(KEY_LOGGED_IN_USER, email).apply()
@@ -47,6 +65,15 @@ class AuthManager(context: Context) : AuthDataSource {
     }
 
     override fun updateSessionWithFirebase(newEmail: String, currentPassword: String, onResult: (Boolean, String?) -> Unit) {
+        if (newEmail.isBlank()) {
+            onResult(false, "Ingresa tu correo electrónico")
+            return
+        }
+        if (currentPassword.isBlank()) {
+            onResult(false, "Ingresa tu contraseña actual")
+            return
+        }
+
         val user = auth.currentUser
         val email = user?.email
 
@@ -78,6 +105,11 @@ class AuthManager(context: Context) : AuthDataSource {
         email: String,
         onResult: (Boolean, String?) -> Unit
     ) {
+        if (email.isBlank()) {
+            onResult(false, "Ingresa tu correo electrónico")
+            return
+        }
+
         auth.sendPasswordResetEmail(email)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {

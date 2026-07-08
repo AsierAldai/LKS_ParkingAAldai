@@ -66,8 +66,8 @@ fun ProfileScreen(onNavigate: (String) -> Unit, viewModel: ProfileViewModel) {
                 Icon(Icons.Default.PhotoCamera, contentDescription = "Cambiar Foto", tint = OrangePrimary, modifier = Modifier.padding(6.dp))
             }
         }
-        Text(text = viewModel.name.value, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = TextDark, modifier = Modifier.padding(top = 16.dp))
-        Text(text = "@${viewModel.username.value}", fontSize = 16.sp, color = Color.Gray)
+        Text(text = viewModel.name.value, fontSize = 30.sp, fontWeight = FontWeight.Bold, color = TextDark, modifier = Modifier.padding(top = 16.dp))
+        Text(text = "@${viewModel.username.value}", fontSize = 17.sp, color = Color.Gray)
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -91,7 +91,7 @@ fun ProfileScreen(onNavigate: (String) -> Unit, viewModel: ProfileViewModel) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Mis Vehículos", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextDark)
+            Text("Mis Vehículos", fontSize = 19.sp, fontWeight = FontWeight.Bold, color = TextDark)
             FloatingActionButton(
                 onClick = { showAddVehicleDialog = true },
                 containerColor = OrangePrimary,
@@ -127,7 +127,7 @@ fun ProfileScreen(onNavigate: (String) -> Unit, viewModel: ProfileViewModel) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, tint = Color.White)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Cerrar Sesión", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text("Cerrar Sesión", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color.White)
             }
         }
         Spacer(modifier = Modifier.height(24.dp))
@@ -170,7 +170,7 @@ fun InfoCard(title: String, actionLabel: String, onAction: () -> Unit, content: 
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextDark)
+                Text(title, fontSize = 21.sp, fontWeight = FontWeight.Bold, color = TextDark)
                 TextButton(onClick = onAction) {
                     Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
@@ -186,8 +186,8 @@ fun InfoCard(title: String, actionLabel: String, onAction: () -> Unit, content: 
 @Composable
 fun ReadOnlyInfoField(label: String, value: String) {
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
-        Text(label, fontSize = 12.sp, color = Color.Gray, fontWeight = FontWeight.SemiBold)
-        Text(value, fontSize = 16.sp, color = TextDark, modifier = Modifier.padding(top = 2.dp))
+        Text(label, fontSize = 13.sp, color = Color.Gray, fontWeight = FontWeight.SemiBold)
+        Text(value, fontSize = 17.sp, color = TextDark, modifier = Modifier.padding(top = 2.dp))
         HorizontalDivider(modifier = Modifier.padding(top = 8.dp), thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.5f))
     }
 }
@@ -200,7 +200,7 @@ fun EmptyVehiclesState(onAddClick: () -> Unit) {
     ) {
         Icon(Icons.Default.DirectionsCar, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(60.dp))
         Text("No tienes vehículos registrados", color = Color.Gray, modifier = Modifier.padding(top = 16.dp))
-        Text("Añade un vehículo para poder hacer reservas", color = Color.Gray.copy(alpha = 0.7f), fontSize = 12.sp)
+        Text("Añade un vehículo para poder hacer reservas", color = Color.Gray.copy(alpha = 0.7f), fontSize = 13.sp)
         Button(
             onClick = onAddClick,
             modifier = Modifier.padding(top = 20.dp),
@@ -231,7 +231,7 @@ fun VehicleItem(vehicle: VehicleEntity, onDelete: () -> Unit) {
             ) { Icon(icon, contentDescription = null, tint = OrangePrimary) }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(vehicle.plate, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextDark)
+                Text(vehicle.plate, fontWeight = FontWeight.Bold, fontSize = 19.sp, color = TextDark)
                 Text("${vehicle.brand} - ${vehicle.color}", color = Color.Gray)
             }
             IconButton(onClick = onDelete) {
@@ -301,7 +301,7 @@ fun EditProfileDialog(
                     ) {
                         Text(
                             text = "Editar Perfil",
-                            fontSize = 20.sp,
+                            fontSize = 22.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextDark,
                         )

@@ -36,6 +36,7 @@ import com.lksnext.ParkingAAldai.ui.components.getSpotPrefix
 import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
 import com.lksnext.ParkingAAldai.ui.theme.TextDark
 import com.lksnext.ParkingAAldai.ui.viewmodels.MyBookingsViewModel
+import com.lksnext.ParkingAAldai.validation.BookingValidator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import java.text.SimpleDateFormat
@@ -87,8 +88,8 @@ private fun MyBookingsScreenContent(
             Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = OrangePrimary)
             Spacer(Modifier.width(8.dp))
             Text(
-                "Reservas Activas",
-                fontSize = 18.sp,
+                "Mis Reservas",
+                fontSize = 19.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF003366)
             )
@@ -98,7 +99,7 @@ private fun MyBookingsScreenContent(
 
         if (reservations.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No tienes reservas activas", color = Color.Gray)
+                Text("No tienes reservas", color = Color.Gray)
             }
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -151,6 +152,9 @@ private fun MyBookingsScreenContent(
 @Composable
 fun BookingCard(reservation: ReservationEntity, onClick: () -> Unit) {
     val sdf = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
+    val status = BookingValidator.getReservationStatus(reservation)
+    val statusText = reservationStatusText(status)
+    val statusColor = reservationStatusColor(status)
 
     Card(
         modifier = Modifier
@@ -169,27 +173,27 @@ fun BookingCard(reservation: ReservationEntity, onClick: () -> Unit) {
                 Text(
                     text = reservation.reservationName,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
+                    fontSize = 17.sp,
                     color = Color(0xFF003366)
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = sdf.format(Date(reservation.dateMillis)),
                     color = Color(0xFF6688AA),
-                    fontSize = 14.sp
+                    fontSize = 15.sp
                 )
             }
 
             Surface(
-                color = OrangePrimary,
+                color = statusColor,
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.align(Alignment.TopEnd)
             ) {
                 Text(
-                    "Activa",
+                    statusText,
                     color = Color.White,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -205,6 +209,9 @@ fun BookingDetailsDialog(
     onEdit: () -> Unit
 ) {
     val sdfFull = remember { SimpleDateFormat("EEEE, d 'de' MMMM 'de' yyyy", Locale.getDefault()) }
+    val status = BookingValidator.getReservationStatus(reservation)
+    val statusText = reservationStatusText(status)
+    val statusColor = reservationStatusColor(status)
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -214,7 +221,7 @@ fun BookingDetailsDialog(
         ) {
             Column(Modifier.padding(20.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Detalles de Reserva", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF003366))
+                    Text("Detalles de Reserva", fontSize = 19.sp, fontWeight = FontWeight.Bold, color = Color(0xFF003366))
                     IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
                         Icon(Icons.Default.Close, null, tint = Color.Gray)
                     }
@@ -236,21 +243,21 @@ fun BookingDetailsDialog(
                             Spacer(Modifier.width(8.dp))
                             Text(
                                 "Plaza ${getSpotPrefix(SpotType.valueOf(reservation.spotType))}-${reservation.spotIndex} - ${reservation.spotType}",
-                                fontSize = 14.sp,
+                                fontSize = 15.sp,
                                 color = Color.Gray
                             )
                         }
 
                         Surface(
-                            color = OrangePrimary,
+                            color = statusColor,
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.align(Alignment.TopEnd) // Arriba a la derecha
                         ) {
                             Text(
-                                "Activa",
+                                statusText,
                                 color = Color.White,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                fontSize = 10.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -293,11 +300,25 @@ fun BookingDetailsDialog(
     }
 }
 
+private fun reservationStatusText(status: BookingValidator.ReservationStatus): String =
+    when (status) {
+        BookingValidator.ReservationStatus.UPCOMING -> "Pendiente"
+        BookingValidator.ReservationStatus.ACTIVE -> "En curso"
+        BookingValidator.ReservationStatus.FINISHED -> "Finalizada"
+    }
+
+private fun reservationStatusColor(status: BookingValidator.ReservationStatus): Color =
+    when (status) {
+        BookingValidator.ReservationStatus.UPCOMING -> Color(0xFF6688AA)
+        BookingValidator.ReservationStatus.ACTIVE -> OrangePrimary
+        BookingValidator.ReservationStatus.FINISHED -> Color.Gray
+    }
+
 @Composable
 fun DetailItem(label: String, value: String) {
     Column(Modifier.padding(vertical = 8.dp)) {
-        Text(label, fontSize = 11.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
-        Text(value, fontSize = 15.sp, color = TextDark, fontWeight = FontWeight.Medium)
+        Text(label, fontSize = 13.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+        Text(value, fontSize = 16.sp, color = TextDark, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -388,13 +409,13 @@ fun EditReservationDialog(
                         .verticalScroll(rememberScrollState())
                 ) {
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-                        Text("Detalles de Reserva", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("Detalles de Reserva", fontSize = 19.sp, fontWeight = FontWeight.Bold)
                         IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, null) }
                     }
 
                     Spacer(Modifier.height(16.dp))
 
-                    Text("Nombre de la reserva", fontSize = 13.sp, color = Color.Gray)
+                    Text("Nombre de la reserva", fontSize = 14.sp, color = Color.Gray)
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
@@ -417,7 +438,7 @@ fun EditReservationDialog(
 
                     Text(
                         text = validationError ?: "Horario disponible y correcto",
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         color = if (validationError == null) Color.Gray else Color.Red,
                         modifier = Modifier.padding(top = 4.dp),
                         fontWeight = if (validationError != null) FontWeight.Bold else FontWeight.Normal

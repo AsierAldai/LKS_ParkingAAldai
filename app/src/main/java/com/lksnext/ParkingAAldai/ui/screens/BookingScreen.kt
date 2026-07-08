@@ -36,7 +36,6 @@ import androidx.work.workDataOf
 import com.lksnext.ParkingAAldai.ui.viewmodels.ProfileViewModel
 import com.lksnext.ParkingAAldai.data.models.ReservationEntity
 import com.lksnext.ParkingAAldai.data.models.VehicleEntity
-import com.lksnext.ParkingAAldai.notifications.NotificationHelper
 import com.lksnext.ParkingAAldai.ui.components.ReservationSheet
 import com.lksnext.ParkingAAldai.ui.components.getSpotPrefix
 import com.lksnext.ParkingAAldai.ui.theme.OrangePrimary
@@ -249,7 +248,7 @@ private fun BookingScreenContent(
                                     "ENTRADA ",
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 11.sp
+                                    fontSize = 12.sp
                                 )
                                 Icon(
                                     Icons.Default.ArrowDownward,
@@ -280,7 +279,7 @@ private fun BookingScreenContent(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     selectedDateFormatted,
-                                    fontSize = 14.sp,
+                                    fontSize = 15.sp,
                                     fontWeight = FontWeight.Medium
                                 )
                             }
@@ -316,6 +315,7 @@ private fun BookingScreenContent(
                         ) {
                             ParkingLayout(
                                 spots = spots,
+                                selectedDateMillis = selectedDateMillis,
                                 combustion = filterCombustion,
                                 electric = filterElectric,
                                 pmr = filterPmr,
@@ -349,7 +349,7 @@ private fun BookingScreenContent(
                                 " SALIDA",
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp
+                                fontSize = 12.sp
                             )
                         }
                     }
@@ -456,12 +456,6 @@ private fun BookingScreenContent(
                         start,
                         end
                     ) {
-                        NotificationHelper.showNotification(
-                            context = context,
-                            title = "Reserva confirmada",
-                            body = "Tu reserva en la plaza $prefix-$spotIndex ha sido confirmada"
-                        )
-
                         val workManager = WorkManager.getInstance(context)
 
                         val endParts = end.split(":")
@@ -525,9 +519,9 @@ fun FilterPopover(
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Filtros", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextDark)
+            Text("Filtros", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = TextDark)
             Spacer(modifier = Modifier.height(12.dp))
-            Text("Tipo de plaza", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextDark)
+            Text("Tipo de plaza", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = TextDark)
             FilterItem("Combustión", Icons.Default.DirectionsCar, combustion, onCombustionChange)
             FilterItem("Eléctrico", Icons.Default.ElectricBolt, electric, onElectricChange)
             FilterItem("PMR", Icons.AutoMirrored.Filled.Accessible, pmr, onPmrChange)
@@ -535,7 +529,7 @@ fun FilterPopover(
             Spacer(modifier = Modifier.height(8.dp))
             HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray)
             Spacer(modifier = Modifier.height(8.dp))
-            Text("Disponibilidad", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextDark)
+            Text("Disponibilidad", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = TextDark)
             FilterItemSimple("Plazas libres", free, onFreeChange)
             FilterItemSimple("Plazas ocupadas", occupied, onOccupiedChange)
         }
@@ -557,7 +551,7 @@ fun FilterItem(label: String, icon: ImageVector, checked: Boolean, onCheckedChan
         Spacer(modifier = Modifier.width(4.dp))
         Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.Gray)
         Spacer(modifier = Modifier.width(8.dp))
-        Text(label, fontSize = 13.sp, color = TextDark)
+        Text(label, fontSize = 14.sp, color = TextDark)
     }
 }
 
@@ -574,13 +568,14 @@ fun FilterItemSimple(label: String, checked: Boolean, onCheckedChange: (Boolean)
             modifier = Modifier.scale(0.8f).size(24.dp)
         )
         Spacer(modifier = Modifier.width(4.dp))
-        Text(label, fontSize = 13.sp, color = TextDark)
+        Text(label, fontSize = 14.sp, color = TextDark)
     }
 }
 
 @Composable
 fun ParkingLayout(
     spots: List<ParkingSpotData>,
+    selectedDateMillis: Long,
     combustion: Boolean,
     electric: Boolean,
     pmr: Boolean,
@@ -597,9 +592,9 @@ fun ParkingLayout(
     ) {
         for (rowIndex in 0..4) {
             Row(horizontalArrangement = Arrangement.Center) {
-                ParkingBlock(startIndex = rowIndex * 20, spots = spots, combustion, electric, pmr, moto, free, occupied, noFiltersActive, reservations, onSpotClick = onSpotClick)
+                ParkingBlock(startIndex = rowIndex * 20, spots = spots, selectedDateMillis, combustion, electric, pmr, moto, free, occupied, noFiltersActive, reservations, onSpotClick = onSpotClick)
                 Spacer(modifier = Modifier.width(32.dp))
-                ParkingBlock(startIndex = rowIndex * 20 + 10, spots = spots, combustion, electric, pmr, moto, free, occupied, noFiltersActive, reservations, onSpotClick = onSpotClick)
+                ParkingBlock(startIndex = rowIndex * 20 + 10, spots = spots, selectedDateMillis, combustion, electric, pmr, moto, free, occupied, noFiltersActive, reservations, onSpotClick = onSpotClick)
             }
             if (rowIndex < 4) Spacer(modifier = Modifier.height(12.dp))
         }
@@ -610,6 +605,7 @@ fun ParkingLayout(
 fun ParkingBlock(
     startIndex: Int,
     spots: List<ParkingSpotData>,
+    selectedDateMillis: Long,
     combustion: Boolean,
     electric: Boolean,
     pmr: Boolean,
@@ -625,7 +621,10 @@ fun ParkingBlock(
                 for (col in 0..4) {
                     val index = startIndex + subRow * 5 + col
                     val spotData = spots[index]
-                    val isOccupied = reservations.any { it.spotIndex == index }
+                    val isOccupied = reservations.any {
+                        it.spotIndex == index &&
+                            com.lksnext.ParkingAAldai.validation.BookingValidator.isSpotOccupied(it, selectedDateMillis)
+                    }
                     val matchesType = when(spotData.type) {
                         SpotType.COMBUSTION -> combustion
                         SpotType.ELECTRIC -> electric

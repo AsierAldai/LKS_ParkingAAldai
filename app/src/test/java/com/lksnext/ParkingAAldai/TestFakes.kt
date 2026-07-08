@@ -169,6 +169,9 @@ class FakeParkingRepository : ParkingRepository {
 
     override suspend fun markAllAsRead(email: String) {
         markedAsReadEmail = email
+        notifications.replaceAll { notification ->
+            if (notification.userEmail == email) notification.copy(isRead = true) else notification
+        }
     }
 
     override fun getUnreadCount(email: String): Flow<Int> {

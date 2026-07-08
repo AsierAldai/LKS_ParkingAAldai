@@ -21,9 +21,13 @@ class NotificationsViewModel(
         repo.getNotificationsByUser(getCurrentEmail())
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun markAllAsRead() {
+    fun markAllAsRead(onComplete: () -> Unit = {}) {
         viewModelScope.launch {
-            repo.markAllAsRead(getCurrentEmail())
+            try {
+                repo.markAllAsRead(getCurrentEmail())
+            } finally {
+                onComplete()
+            }
         }
     }
 }

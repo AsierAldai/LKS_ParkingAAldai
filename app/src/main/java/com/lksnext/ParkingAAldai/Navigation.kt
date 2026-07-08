@@ -93,7 +93,7 @@ fun AppNavigation(navController: NavHostController) {
                                         ) {
                                             Text(
                                                 text = if (unreadCount > 9) "9+" else unreadCount.toString(),
-                                                fontSize = 11.sp
+                                                fontSize = 12.sp
                                             )
                                         }
                                     }

@@ -78,7 +78,7 @@ private fun ForgotPasswordScreenContent(
                 Text(
                     text = "Volver",
                     color = TextDark,
-                    fontSize = 16.sp,
+                    fontSize = 17.sp,
                     modifier = Modifier.padding(start = 8.dp)
                 )
             }
@@ -109,7 +109,7 @@ private fun ForgotPasswordScreenContent(
                 // Title
                 Text(
                     text = "Recuperación de Contraseña",
-                    fontSize = 32.sp,
+                    fontSize = 34.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextDark,
                     textAlign = TextAlign.Center,
@@ -121,7 +121,7 @@ private fun ForgotPasswordScreenContent(
                 Text(
                     text = "Introduce tu correo corporativo y te enviaremos un enlace para restablecer tu contraseña.",
                     color = TextDark.copy(alpha = 0.7f),
-                    fontSize = 16.sp,
+                    fontSize = 17.sp,
                     textAlign = TextAlign.Center
                 )
 
@@ -167,7 +167,7 @@ private fun ForgotPasswordScreenContent(
                 ) {
                     Text(
                         text = "Enviar Enlace de Recuperación",
-                        fontSize = 18.sp,
+                        fontSize = 19.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )

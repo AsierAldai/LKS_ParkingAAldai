@@ -77,7 +77,7 @@ fun AddVehicleDialog(onDismiss: () -> Unit, onAddVehicle: (String, String, Strin
                     ) {
                         Text(
                             "Añadir Vehículo",
-                            fontSize = 22.sp,
+                            fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextDark
                         )
@@ -105,7 +105,7 @@ fun AddVehicleDialog(onDismiss: () -> Unit, onAddVehicle: (String, String, Strin
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Text(
                             "Tipo de vehículo",
-                            fontSize = 14.sp,
+                            fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextDark
                         )
@@ -231,7 +231,7 @@ fun TypeSelectorItem(label: String, icon: ImageVector, isSelected: Boolean, onCl
         ) {
             Icon(icon, contentDescription = null, tint = if (isSelected) OrangePrimary else Color.Gray, modifier = Modifier.size(28.dp))
             Spacer(modifier = Modifier.height(8.dp))
-            Text(label, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = if (isSelected) OrangePrimary else Color.Gray)
+            Text(label, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = if (isSelected) OrangePrimary else Color.Gray)
         }
     }
 }

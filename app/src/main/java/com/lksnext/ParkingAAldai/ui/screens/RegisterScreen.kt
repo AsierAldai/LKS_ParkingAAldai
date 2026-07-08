@@ -115,7 +115,7 @@ fun RegisterScreenContent(
             // Title
             Text(
                 text = "Crear Cuenta",
-                fontSize = 32.sp,
+                fontSize = 34.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextDark,
                 textAlign = TextAlign.Center
@@ -200,7 +200,7 @@ fun RegisterScreenContent(
             ) {
                 Text(
                     text = "Crear Cuenta",
-                    fontSize = 18.sp,
+                    fontSize = 19.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
@@ -237,10 +237,11 @@ fun RegisterTextField(
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
-            text = label,
-            fontWeight = FontWeight.SemiBold,
-            color = TextDark,
-            modifier = Modifier.padding(bottom = 8.dp)
+               text = label,
+               fontWeight = FontWeight.SemiBold,
+               color = TextDark,
+               fontSize = 15.sp,
+               modifier = Modifier.padding(bottom = 8.dp)
         )
         OutlinedTextField(
             value = value,
